@@ -60,8 +60,8 @@ void app_main(void)
     if (mpu6500_init() == ESP_OK) {
         xTaskCreate(imu_log_task, "imu_log", 3072, NULL, 4, NULL);
     } else {
-        ESP_LOGW(TAG, "Continuing without IMU. Wire SDA=GPIO6, SCL=GPIO7, "
-                      "AD0=GND, VCC=3V3, then reset.");
+        ESP_LOGW(TAG, "Continuing without IMU. Wire SDA=D10/GPIO10, "
+                      "SCL=D7/GPIO20, AD0=GND, VCC=3V3, then reset.");
     }
 
     ESP_LOGI(TAG, "FreeLook up. Waiting for radio (X20S) to connect.");
