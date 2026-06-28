@@ -11,10 +11,30 @@
 
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "para_ble.h"
+#include "mpu6500.h"
 
 static const char *TAG = "freelook";
+
+// M2 bring-up: read the IMU and print accel (g), gyro (dps), and temperature.
+// This is a verification path; M3 replaces it with the fusion pipeline.
+static void imu_log_task(void *arg)
+{
+    imu_sample_t s;
+    for (;;) {
+        if (mpu6500_read(&s) == ESP_OK) {
+            ESP_LOGI("imu",
+                     "acc[g] % .3f % .3f % .3f  gyr[dps] % .2f % .2f % .2f  %.1fC",
+                     s.ax, s.ay, s.az, s.gx, s.gy, s.gz, s.temp_c);
+        } else {
+            ESP_LOGW("imu", "read failed");
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));  // 5 Hz to keep the log readable
+    }
+}
 
 void app_main(void)
 {
@@ -33,6 +53,15 @@ void app_main(void)
     if (para_ble_start() != 0) {
         ESP_LOGE(TAG, "PARA link failed to start");
         return;
+    }
+
+    // Bring up the IMU. If it is not wired yet, keep running so the PARA link
+    // still advertises and streams centered channels.
+    if (mpu6500_init() == ESP_OK) {
+        xTaskCreate(imu_log_task, "imu_log", 3072, NULL, 4, NULL);
+    } else {
+        ESP_LOGW(TAG, "Continuing without IMU. Wire SDA=GPIO6, SCL=GPIO7, "
+                      "AD0=GND, VCC=3V3, then reset.");
     }
 
     ESP_LOGI(TAG, "FreeLook up. Waiting for radio (X20S) to connect.");
