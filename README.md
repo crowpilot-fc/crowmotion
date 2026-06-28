@@ -12,9 +12,15 @@ goggles (developed against the DJI Goggles 3) and be removable.
 
 ## Hardware
 
-- Seeed Studio XIAO ESP32-C3 (RISC-V, BLE 5.0, onboard USB-C 1S LiPo charging)
+v1 is a deliberately minimal, two-component build:
+
+- Seeed Studio XIAO ESP32-C3 (RISC-V, BLE 5.0)
 - MPU6500 IMU (6-axis accel + gyro), I2C, address 0x68
-- 500mAh 1S LiPo, charged through the XIAO USB-C
+- Powered over USB-C from any source (a power bank, for example)
+
+A battery-powered version (1S LiPo with deep sleep, wake-on-motion, an on/off
+switch, and a status LED) is planned as a later phase. v1 stays at two
+components, the MCU and the IMU, always on while plugged in.
 
 Reference radio: FrSky X20S (Tandem) running EthOS, over the PARA Bluetooth
 trainer link.
@@ -26,8 +32,8 @@ trainer link.
 - The PARA link advertises BLE GATT service 0xFFF0 and delivers channel data to
   the radio via notify on characteristic 0xFFF6. The radio is nudged into
   trainer-receive mode with a short "\r\n" on connect.
-- Recenter is planned via double-tap (accelerometer jerk detection), an optional
-  button, and a BLE command.
+- Recenter is planned via double-tap (accelerometer jerk detection) and a BLE
+  command.
 
 ## Software
 
@@ -55,16 +61,20 @@ https://app.notion.com/p/38df4e695ae3818385c4ed0a3500c547
 The repository holds code plus this README, LICENSE, NOTICE, and build
 instructions. Milestones in brief:
 
+v1 (USB-powered, two components):
+
 1. Bluetooth bring-up: advertise PARA, connect to the X20S, stream centered
    channels. (de-risk the radio link first)
 2. MPU6500 bring-up and raw reads over I2C.
 3. 6DOF fusion (Madgwick) producing stable pan/tilt/roll.
 4. Continuous gyro auto-calibration and board-rotation compensation.
 5. Axis-to-channel mapping with per-axis gain, center, and limits.
-6. Recenter: double-tap, optional button, BLE command.
+6. Recenter: double-tap and BLE command.
 7. Settings persistence (NVS) and configuration.
-8. Power: measure real session runtime on the 500mAh cell, then enclosure and
-   goggles mounting.
+8. Enclosure and goggles mounting.
+
+Deferred to a battery-powered v2: 1S LiPo, on/off switch, deep sleep with
+wake-on-motion and auto-sleep, status LED, and battery sensing.
 
 ## Credits and lineage
 
