@@ -16,12 +16,12 @@
 
 static const char *TAG = "mpu6500";
 
-// --- Wiring / bus config (XIAO ESP32-C3 right-side pins) ---
-// D8 (GPIO8) and D9 (GPIO9) are boot strapping pins, so I2C uses the two
-// non-strapping right-side pins: D10 and D7.
+// --- Wiring / bus config (ESP32-C3 Super Mini or XIAO) ---
+// I2C uses two free, non-strapping GPIOs (GPIO8/GPIO9 are boot strapping pins).
+// On the XIAO these GPIOs are the right-side pads D10 (SDA) and D7 (SCL).
 #define MPU_I2C_PORT I2C_NUM_0
-#define MPU_PIN_SDA 10  // D10
-#define MPU_PIN_SCL 20  // D7
+#define MPU_PIN_SDA 10  // GPIO10
+#define MPU_PIN_SCL 20  // GPIO20
 #define MPU_I2C_HZ 400000
 #define MPU_ADDR 0x68   // AD0 = GND
 #define MPU_IO_TIMEOUT_MS 100

@@ -1,7 +1,9 @@
 # Building and flashing FreeLook (macOS)
 
-FreeLook targets the Seeed Studio XIAO ESP32-C3 and is built with Espressif
-ESP-IDF and the NimBLE Bluetooth host. This guide covers a macOS dev machine.
+FreeLook targets the ESP32-C3 and is built with Espressif ESP-IDF and the
+NimBLE Bluetooth host. The reference board is the ESP32-C3 Super Mini; the
+Seeed Studio XIAO ESP32-C3 also works unchanged (same chip, same GPIO numbers).
+This guide covers a macOS dev machine.
 
 ## 1. Install ESP-IDF
 

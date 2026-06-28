@@ -7,7 +7,7 @@
 // Original implementation. Inspired by RC HeadTracker (dlktdr) and
 // HeadTracker (ysoldak); no code from those projects is reused.
 //
-// Build target: Seeed Studio XIAO ESP32-C3, ESP-IDF + NimBLE.
+// Build target: ESP32-C3 (Super Mini or Seeed XIAO), ESP-IDF + NimBLE.
 
 #include <math.h>
 
@@ -87,7 +87,7 @@ static void fusion_task(void *arg)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "FreeLook starting (XIAO ESP32-C3)");
+    ESP_LOGI(TAG, "FreeLook starting (ESP32-C3)");
 
     // NVS is needed by the BLE stack and, later (M7), by settings persistence.
     esp_err_t err = nvs_flash_init();
@@ -109,8 +109,8 @@ void app_main(void)
     if (mpu6500_init() == ESP_OK) {
         xTaskCreate(fusion_task, "fusion", 4096, NULL, 4, NULL);
     } else {
-        ESP_LOGW(TAG, "Continuing without IMU. Wire SDA=D10/GPIO10, "
-                      "SCL=D7/GPIO20, AD0=GND, VCC=3V3, then reset.");
+        ESP_LOGW(TAG, "Continuing without IMU. Wire SDA=GPIO10, SCL=GPIO20, "
+                      "AD0=GND, VCC=3V3, then reset.");
     }
 
     ESP_LOGI(TAG, "FreeLook up. Waiting for radio (X20S) to connect.");
