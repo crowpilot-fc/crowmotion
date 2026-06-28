@@ -1,0 +1,26 @@
+FreeLook
+Copyright 2026 Nitin Kumar
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+FreeLook is an original, from-scratch implementation. It was inspired by, and
+its design draws ideas from, the following open-source head tracker projects.
+No source code from these projects is copied into FreeLook. They are credited
+here in gratitude and for transparency about lineage.
+
+  RC HeadTracker by Cliff Blackburn (dlktdr)
+    https://github.com/dlktdr/HeadTracker
+    Licensed GPL-3.0. Used only as a conceptual reference for the FrSky PARA
+    wireless trainer protocol and overall feature set. No code reused.
+
+  HeadTracker by Yury Soldak (ysoldak)
+    https://github.com/ysoldak/HeadTracker
+    Released into the public domain (Unlicense). Referenced for its minimalist
+    automatic gyro calibration and PARA reset/compatibility approach.
+
+The FrSky PARA (Bluetooth wireless trainer) link is a wire protocol and is
+reimplemented from its observable behavior, not copied from any implementation.
+
+Third-party components are pulled in at build time by the ESP-IDF build system
+and the ESP-IDF component manager. Each such component is distributed under its
+own license; see the respective component sources for details.

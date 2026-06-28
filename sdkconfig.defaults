@@ -1,0 +1,26 @@
+# FreeLook default build configuration for the Seeed XIAO ESP32-C3.
+# These seed sdkconfig on first build. Override locally with `idf.py menuconfig`;
+# do not commit the generated sdkconfig (it is gitignored).
+
+# Target is set on the command line: idf.py set-target esp32c3
+
+# --- Bluetooth: NimBLE host, peripheral only ---
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+
+# Advertised device name (the radio sees this as the trainer source).
+CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="FreeLook"
+
+# --- Partition table (custom: adds an NVS region for settings persistence) ---
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# --- Logging ---
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# --- Console over the XIAO USB-C (native USB serial/JTAG) ---
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
