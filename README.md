@@ -49,7 +49,9 @@ idf.py -p /dev/cu.usbmodemXXXX flash monitor
 ## Roadmap
 
 The living plan, design decisions, and change log are maintained in Notion (this
-is a personal project where Notion is the source of truth for non-code docs).
+is a personal project where Notion is the source of truth for non-code docs):
+https://app.notion.com/p/38df4e695ae3818385c4ed0a3500c547
+
 The repository holds code plus this README, LICENSE, NOTICE, and build
 instructions. Milestones in brief:
 
