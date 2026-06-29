@@ -54,6 +54,7 @@ static const char *TAG = "para";
 
 // --- BLE service / characteristic UUIDs (16-bit FrSky PARA) ---
 #define PARA_SVC_UUID 0xFFF0
+#define PARA_SVC_SETTINGS_UUID 0xFFFA  // advertised alongside 0xFFF0, as FrSky expects
 #define PARA_CHR_FFF6_UUID 0xFFF6
 
 // Current channel values, centered until the IMU pipeline drives them.
@@ -234,22 +235,36 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
 
 static void para_advertise(void)
 {
-    struct ble_hs_adv_fields fields = {0};
-    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-
     const char *name = ble_svc_gap_device_name();
-    fields.name = (uint8_t *)name;
-    fields.name_len = strlen(name);
-    fields.name_is_complete = 1;
 
-    ble_uuid16_t para_uuid = BLE_UUID16_INIT(PARA_SVC_UUID);
-    fields.uuids16 = &para_uuid;
-    fields.num_uuids16 = 1;
-    fields.uuids16_is_complete = 1;
+    // Advertising packet: flags + the FrSky service UUIDs (0xFFF0, 0xFFFA).
+    // The name goes in the scan response, not here: FrSky's trainer scan reads
+    // the display name from the scan response, so without it the radio shows
+    // the device's address instead of "FreeLook".
+    struct ble_hs_adv_fields adv = {0};
+    adv.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    ble_uuid16_t uuids[] = {
+        BLE_UUID16_INIT(PARA_SVC_UUID),
+        BLE_UUID16_INIT(PARA_SVC_SETTINGS_UUID),
+    };
+    adv.uuids16 = uuids;
+    adv.num_uuids16 = 2;
+    adv.uuids16_is_complete = 1;
 
-    int rc = ble_gap_adv_set_fields(&fields);
+    int rc = ble_gap_adv_set_fields(&adv);
     if (rc != 0) {
         ESP_LOGE(TAG, "adv_set_fields failed (rc %d)", rc);
+        return;
+    }
+
+    // Scan response: the complete local name.
+    struct ble_hs_adv_fields rsp = {0};
+    rsp.name = (uint8_t *)name;
+    rsp.name_len = strlen(name);
+    rsp.name_is_complete = 1;
+    rc = ble_gap_adv_rsp_set_fields(&rsp);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "adv_rsp_set_fields failed (rc %d)", rc);
         return;
     }
 
@@ -263,7 +278,8 @@ static void para_advertise(void)
         ESP_LOGE(TAG, "adv_start failed (rc %d)", rc);
         return;
     }
-    ESP_LOGI(TAG, "Advertising as \"%s\" (service 0x%04X)", name, PARA_SVC_UUID);
+    ESP_LOGI(TAG, "Advertising as \"%s\" (services 0x%04X, 0x%04X)", name,
+             PARA_SVC_UUID, PARA_SVC_SETTINGS_UUID);
 }
 
 // --- Host stack lifecycle ----------------------------------------------------
