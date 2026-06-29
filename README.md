@@ -4,11 +4,13 @@ A DIY wireless FPV head tracker. FreeLook measures head pan, tilt, and roll and
 streams them as trainer channels to an RC radio over the FrSky PARA Bluetooth
 wireless trainer link, so a camera gimbal on the aircraft follows your head.
 
-It is a small, self-contained, battery-powered module designed to ride on FPV
-goggles (developed against the DJI Goggles 3) and be removable.
+It is a small, removable module that rides on FPV goggles (developed against the
+DJI Goggles 3). v1 is USB-powered; v2 adds an onboard battery for standalone use.
 
-> Status: early work in progress. Milestone 1 (Bluetooth bring-up) is in
-> progress. See the roadmap link below.
+> Status: early work in progress. On v1 hardware the firmware advertises the
+> PARA link and reads the MPU6500 IMU; 6DOF fusion is implemented (on-hardware
+> check pending). Next up: mapping head motion to channels, the v2 battery
+> boards, and the printed enclosure. The Notion roadmap below has live status.
 
 FreeLook comes in two versions, sharing one firmware codebase and the same
 MPU6500 IMU. All options cost far less than a XIAO nRF52840 Sense or an Arduino

@@ -48,9 +48,13 @@ idf.py build
 `set-target` is needed once (it generates sdkconfig from sdkconfig.defaults and
 the chip target). Re-run it only if you change targets.
 
+Targets: v1 builds for `esp32c3` (the C3 Super Mini / XIAO C3). The battery v2
+boards add `esp32s3` (Seeed XIAO ESP32-S3) and `esp32h2` (ESP32-H2 Super Mini)
+as further targets; the PARA, IMU, and fusion code is shared across all of them.
+
 ## 4. Flash and monitor
 
-The XIAO ESP32-C3 exposes a native USB serial/JTAG over its USB-C port, so no
+The ESP32-C3 boards expose a native USB serial/JTAG over their USB-C port, so no
 external programmer is needed. Plug it in and find the port:
 
 ```
@@ -70,10 +74,18 @@ while plugging in (or while pressing RESET), then run flash again.
 
 ## 5. What you should see
 
-At the current scaffold stage, the monitor prints the FreeLook banner and a
-note that the PARA Bluetooth link is a scaffold pending Milestone 1. Once M1
-lands, the device advertises as "FreeLook" and the FrSky X20S can connect to it
-as a wireless trainer source streaming centered channels.
+On boot the monitor prints the FreeLook banner, brings up NimBLE, and advertises
+as "FreeLook" (PARA service 0xFFF0), streaming 8 centered trainer channels. If
+the MPU6500 is wired, it is detected and the fusion task logs yaw/pitch/roll;
+if not, it logs a wiring hint and keeps the PARA link running. Connect the FrSky
+X20S as a wireless trainer to receive the channels.
+
+```
+para: Advertising as "FreeLook" (service 0xFFF0)
+para: PARA link up: 8 channels at 1500 us, advertising as "FreeLook"
+mpu6500: MPU6500 detected (WHO_AM_I = 0x70)
+fusion: yaw    0.0  pitch   -0.2  roll    0.1
+```
 
 ## Notes
 
