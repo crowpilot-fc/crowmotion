@@ -17,6 +17,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "board.h"
 #include "para_ble.h"
 #include "mpu6500.h"
 #include "madgwick.h"
@@ -102,7 +103,7 @@ static void fusion_task(void *arg)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "FreeLook starting (ESP32-C3)");
+    ESP_LOGI(TAG, "FreeLook starting (%s)", FREELOOK_BOARD_NAME);
 
     // NVS is needed by the BLE stack and, later (M7), by settings persistence.
     esp_err_t err = nvs_flash_init();
@@ -124,8 +125,8 @@ void app_main(void)
     if (mpu6500_init() == ESP_OK) {
         xTaskCreate(fusion_task, "fusion", 4096, NULL, 4, NULL);
     } else {
-        ESP_LOGW(TAG, "Continuing without IMU. Wire SDA=GPIO10, SCL=GPIO20, "
-                      "AD0=GND, VCC=3V3, then reset.");
+        ESP_LOGW(TAG, "Continuing without IMU. Check the wiring (pins logged "
+                      "above), AD0=GND, VCC=3V3, then reset.");
     }
 
     ESP_LOGI(TAG, "FreeLook up. Waiting for radio (X20S) to connect.");

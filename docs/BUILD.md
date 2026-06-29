@@ -52,6 +52,11 @@ Targets: v1 builds for `esp32c3` (the C3 Super Mini / XIAO C3). The battery v2
 boards add `esp32s3` (Seeed XIAO ESP32-S3) and `esp32h2` (ESP32-H2 Super Mini)
 as further targets; the PARA, IMU, and fusion code is shared across all of them.
 
+Board selection: the C3 Super Mini and the XIAO ESP32-C3 are both `esp32c3` but
+have different one-side I2C pins, so pick the board in `idf.py menuconfig` under
+"FreeLook Configuration -> Target board" (default: ESP32-C3 Super Mini). Changing
+the board needs a rebuild.
+
 ## 4. Flash and monitor
 
 The ESP32-C3 boards expose a native USB serial/JTAG over their USB-C port, so no

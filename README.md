@@ -27,19 +27,22 @@ Nano 33 BLE Sense.
 
 In all cases the IMU is the MPU6500 (6-axis accel + gyro), I2C, address 0x68.
 
-### Wiring (MPU6500 to ESP32-C3)
+### Wiring (MPU6500)
 
-| MPU6500 | ESP32-C3 (by GPIO) | XIAO pad |
+Pins are chosen per board so all wiring stays on one side, next to that board's
+3V3 and GND. Pick the board in `idf.py menuconfig` (FreeLook Configuration ->
+Target board; the default is the ESP32-C3 Super Mini).
+
+| Signal | ESP32-C3 Super Mini | XIAO ESP32-C3 |
 |---|---|---|
 | VCC | 3V3 | 3V3 |
 | GND | GND | GND |
-| SDA | GPIO10 | D10 |
-| SCL | GPIO20 | D7 |
-| AD0 | GND (sets address 0x68) | GND |
+| SDA | GPIO4 (D2) | GPIO10 (D10) |
+| SCL | GPIO3 (D1) | GPIO20 (D7) |
+| AD0 | GND (address 0x68) | GND (address 0x68) |
 
-The Super Mini labels pins by GPIO number; the XIAO uses D-pad labels (shown for
-reference). Note: the ESP32-C3 Super Mini has a weaker PCB antenna than the
-XIAO, fine at short range but worth knowing if you see BLE dropouts.
+The Super Mini has a weaker PCB antenna than the XIAO, fine at short range but
+worth knowing if you see BLE dropouts.
 
 Reference radio: FrSky X20S (Tandem) running EthOS, over the PARA Bluetooth
 trainer link.
