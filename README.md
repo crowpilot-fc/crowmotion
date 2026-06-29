@@ -10,18 +10,20 @@ goggles (developed against the DJI Goggles 3) and be removable.
 > Status: early work in progress. Milestone 1 (Bluetooth bring-up) is in
 > progress. See the roadmap link below.
 
-## Hardware
+FreeLook comes in two versions, sharing one firmware codebase and the same
+MPU6500 IMU. All options cost far less than a XIAO nRF52840 Sense or an Arduino
+Nano 33 BLE Sense.
 
-v1 is a deliberately minimal, two-component build:
+- **v1 - cheapest (USB)**: ESP32-C3 Super Mini, powered over USB-C from any
+  source (a power bank, for example). Two components, always on while plugged
+  in. The Seeed XIAO ESP32-C3 also works unchanged.
+- **v2 - standalone (battery)**: an onboard 1S LiPo makes it truly wireless.
+  The LiPo's built-in protection handles safety, so there is no switch and no
+  extra parts. Deep sleep after 5 minutes of inactivity, wake on movement, and
+  a single-color status LED. Supported boards: Seeed XIAO ESP32-S3 (onboard
+  USB-C charging) and ESP32-H2 Super Mini (cheaper, lower power).
 
-- ESP32-C3 Super Mini (RISC-V, BLE 5.0). The Seeed XIAO ESP32-C3 also works
-  unchanged, same chip and same GPIO numbers.
-- MPU6500 IMU (6-axis accel + gyro), I2C, address 0x68
-- Powered over USB-C from any source (a power bank, for example)
-
-A battery-powered version (1S LiPo with deep sleep, wake-on-motion, an on/off
-switch, and a status LED) is planned as a later phase. v1 stays at two
-components, the MCU and the IMU, always on while plugged in.
+In all cases the IMU is the MPU6500 (6-axis accel + gyro), I2C, address 0x68.
 
 ### Wiring (MPU6500 to ESP32-C3)
 
@@ -88,8 +90,9 @@ v1 (USB-powered, two components):
 7. Settings persistence (NVS) and configuration.
 8. Enclosure and goggles mounting.
 
-Deferred to a battery-powered v2: 1S LiPo, on/off switch, deep sleep with
-wake-on-motion and auto-sleep, status LED, and battery sensing.
+v2 (battery, on the XIAO ESP32-S3 or ESP32-H2 Super Mini): onboard 1S LiPo
+(protected cell, no switch), deep sleep with 5-minute auto-sleep and
+wake-on-motion, a single-color status LED, and the multi-target build.
 
 ## Credits and lineage
 
