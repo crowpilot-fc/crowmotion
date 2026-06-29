@@ -20,12 +20,14 @@
 #include "para_ble.h"
 #include "mpu6500.h"
 #include "madgwick.h"
+#include "mapping.h"
 
 static const char *TAG = "freelook";
 
 #define FUSION_PERIOD_MS 10           // 100 Hz fusion loop
 #define FUSION_BETA 0.1f
 #define BIAS_SAMPLES 100              // ~1 s startup gyro-bias estimate
+#define SETTLE_ITERS 50               // ~0.5 s for fusion to converge before centering
 #define DEG_TO_RAD 0.01745329252f
 
 // M3: read the IMU, run Madgwick 6DOF fusion, and log yaw/pitch/roll.
@@ -58,6 +60,7 @@ static void fusion_task(void *arg)
 
     int64_t t_prev = esp_timer_get_time();
     int log_div = 0;
+    int settle = 0;
     for (;;) {
         imu_sample_t s;
         if (mpu6500_read(&s) == ESP_OK) {
@@ -73,10 +76,22 @@ static void fusion_task(void *arg)
             float gz = (s.gz - bz) * DEG_TO_RAD;
             madgwick_update_imu(&filt, gx, gy, gz, s.ax, s.ay, s.az, dt);
 
+            float yaw, pitch, roll;
+            madgwick_get_euler_deg(&filt, &yaw, &pitch, &roll);
+
+            // Once fusion has settled, set "look forward" as center, then map
+            // head motion onto the PARA channels every loop.
+            if (settle < SETTLE_ITERS) {
+                if (++settle == SETTLE_ITERS) {
+                    mapping_recenter(yaw, pitch, roll);
+                    ESP_LOGI("fusion", "centered; head motion now drives channels");
+                }
+            } else {
+                mapping_update(yaw, pitch, roll);
+            }
+
             if (++log_div >= 10) {  // ~10 Hz
                 log_div = 0;
-                float yaw, pitch, roll;
-                madgwick_get_euler_deg(&filt, &yaw, &pitch, &roll);
                 ESP_LOGI("fusion", "yaw % 7.1f  pitch % 7.1f  roll % 7.1f",
                          yaw, pitch, roll);
             }
