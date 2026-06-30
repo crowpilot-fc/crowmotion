@@ -24,7 +24,7 @@ static const char *TAG = "mpu6500";
 #define MPU_I2C_PORT I2C_NUM_0
 #define MPU_PIN_SDA FREELOOK_I2C_SDA_GPIO
 #define MPU_PIN_SCL FREELOOK_I2C_SCL_GPIO
-#define MPU_I2C_HZ 400000
+#define MPU_I2C_HZ 100000   // 100 kHz, tolerant of weak / internal-only pull-ups
 #define MPU_ADDR 0x68   // AD0 = GND
 #define MPU_IO_TIMEOUT_MS 100
 
@@ -91,9 +91,16 @@ esp_err_t mpu6500_init(void)
         return err;
     }
 
-    // Probe WHO_AM_I. An I2C error here means the IMU is not wired/powered.
+    // Probe WHO_AM_I. Retry a few times: the first transaction after bus setup
+    // can return ESP_ERR_INVALID_STATE while the lines settle high.
     uint8_t who = 0;
-    err = reg_read(REG_WHO_AM_I, &who, 1);
+    for (int attempt = 0; attempt < 5; attempt++) {
+        err = reg_read(REG_WHO_AM_I, &who, 1);
+        if (err == ESP_OK) {
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "No response at 0x%02X (%s). Check wiring: SDA=GPIO%d, "
                       "SCL=GPIO%d, AD0=GND, VCC=3V3.",
