@@ -20,6 +20,19 @@ void madgwick_init(madgwick_t *f, float beta)
     f->beta = beta;
 }
 
+void madgwick_set_from_accel(madgwick_t *f, float ax, float ay, float az)
+{
+    // Roll about X and pitch about Y from the gravity direction; yaw = 0.
+    float roll = atan2f(ay, az);
+    float pitch = atan2f(-ax, sqrtf(ay * ay + az * az));
+    float cr = cosf(roll * 0.5f), sr = sinf(roll * 0.5f);
+    float cp = cosf(pitch * 0.5f), sp = sinf(pitch * 0.5f);
+    f->q0 = cp * cr;
+    f->q1 = cp * sr;
+    f->q2 = sp * cr;
+    f->q3 = -sp * sr;
+}
+
 void madgwick_update_imu(madgwick_t *f, float gx, float gy, float gz,
                          float ax, float ay, float az, float dt)
 {

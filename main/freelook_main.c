@@ -59,6 +59,12 @@ static void fusion_task(void *arg)
     }
     ESP_LOGI("fusion", "startup gyro bias [dps] % .2f % .2f % .2f", bx, by, bz);
 
+    // Seed orientation from gravity so fusion starts level-correct (no ramp).
+    imu_sample_t s0;
+    if (mpu6500_read(&s0) == ESP_OK) {
+        madgwick_set_from_accel(&filt, s0.ax, s0.ay, s0.az);
+    }
+
     int64_t t_prev = esp_timer_get_time();
     int log_div = 0;
     int settle = 0;

@@ -23,6 +23,10 @@ typedef struct {
 // Initialize to identity orientation with the given gain (typical 0.1).
 void madgwick_init(madgwick_t *f, float beta);
 
+// Seed orientation from one accelerometer reading (gravity) so the filter
+// starts level-correct instead of ramping from identity. Yaw is set to 0.
+void madgwick_set_from_accel(madgwick_t *f, float ax, float ay, float az);
+
 // Advance the filter. Gyro in rad/s, accel in any consistent unit (normalized
 // internally), dt in seconds.
 void madgwick_update_imu(madgwick_t *f, float gx, float gy, float gz,
