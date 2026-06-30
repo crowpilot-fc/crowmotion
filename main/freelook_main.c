@@ -19,12 +19,43 @@
 
 #include "board.h"
 #include "config.h"
+#include "tracker.h"
+#include "webconfig.h"
 #include "para_ble.h"
 #include "mpu6500.h"
 #include "madgwick.h"
 #include "mapping.h"
 
 static const char *TAG = "freelook";
+
+// --- Shared tracker state (read by the config web server) ---
+static tracker_snapshot_t s_snap;
+static volatile bool s_recenter_req = false;
+static volatile bool s_autodetect_req = false;
+
+void tracker_get(tracker_snapshot_t *out) { *out = s_snap; }
+void tracker_request_recenter(void) { s_recenter_req = true; }
+void tracker_request_autodetect(void) { s_autodetect_req = true; }
+
+// Set the orientation remap so the IMU axis most aligned with gravity becomes
+// canonical Z (up); the other two axes fill X/Y. Uses the raw (pre-remap) accel.
+static void autodetect_orientation(float ax, float ay, float az)
+{
+    float a[3] = {ax, ay, az};
+    int k = 0;
+    for (int i = 1; i < 3; i++) {
+        if (fabsf(a[i]) > fabsf(a[k])) k = i;
+    }
+    int sgn = (a[k] >= 0.0f) ? 1 : -1;
+    int8_t *r = config_get()->remap;
+    int oi = 0;
+    for (int i = 0; i < 3; i++) {
+        if (i != k) r[oi++] = (int8_t)(i + 1);   // canonical X, Y <- other axes
+    }
+    r[2] = (int8_t)(sgn * (k + 1));               // canonical Z <- gravity axis
+    config_save();
+    ESP_LOGI("orient", "auto-detected remap [%d %d %d]", r[0], r[1], r[2]);
+}
 
 #define FUSION_PERIOD_MS 10           // 100 Hz fusion loop
 #define FUSION_BETA 0.1f
@@ -97,9 +128,14 @@ static void fusion_task(void *arg)
     int settle = 0;
     float last_amag = 1.0f;
     int64_t last_tap_ms = 0;
+    int tap_count = 0;
     for (;;) {
         imu_sample_t s;
         if (mpu6500_read(&s) == ESP_OK) {
+            if (s_autodetect_req) {
+                s_autodetect_req = false;
+                autodetect_orientation(s.ax, s.ay, s.az);  // uses raw (pre-remap)
+            }
             board_remap(&s);
             int64_t now = esp_timer_get_time();
             float dt = (now - t_prev) / 1e6f;
@@ -126,40 +162,63 @@ static void fusion_task(void *arg)
             float yaw, pitch, roll;
             madgwick_get_euler_deg(&filt, &yaw, &pitch, &roll);
 
-            // M6: a tap is a sharp spike in accel-magnitude jerk. Two taps within
-            // a short window recenter to wherever the head is currently pointing.
+            if (s_recenter_req) {
+                s_recenter_req = false;
+                mapping_recenter(yaw, pitch, roll);
+            }
+
+            // Tap gestures: count taps in a sequence and act when it ends.
+            // 2 = recenter, 4 = toggle the config hotspot (3 reserved).
             float amag = sqrtf(s.ax * s.ax + s.ay * s.ay + s.az * s.az);
             float jerk = (amag - last_amag) / dt;
             last_amag = amag;
+            int64_t now_ms = now / 1000;
 
-            // Once fusion has settled, set "look forward" as center, then map
-            // head motion onto the PARA channels every loop.
             if (settle < SETTLE_ITERS) {
                 if (++settle == SETTLE_ITERS) {
                     mapping_recenter(yaw, pitch, roll);
                     ESP_LOGI("fusion", "centered; head motion now drives channels");
                 }
             } else {
-                // A tap is a jerk spike while the board is not rotating fast.
                 float gmag = sqrtf(dgx * dgx + dgy * dgy + dgz * dgz);
                 if (jerk > config_get()->tap_intensity && gmag < TAP_GYRO_MAX_DPS) {
-                    int64_t now_ms = now / 1000;
-                    int64_t gap = now_ms - last_tap_ms;
-                    if (gap > TAP_GAP_MIN_MS && gap < TAP_GAP_MAX_MS) {
+                    int64_t gap = (last_tap_ms == 0) ? 1000000 : now_ms - last_tap_ms;
+                    if (gap < TAP_GAP_MIN_MS) {
+                        // debounce: same tap, ignore
+                    } else if (gap <= TAP_GAP_MAX_MS) {
+                        tap_count++;
+                        last_tap_ms = now_ms;
+                    } else {
+                        tap_count = 1;
+                        last_tap_ms = now_ms;
+                    }
+                }
+                if (tap_count > 0 && last_tap_ms != 0 &&
+                    (now_ms - last_tap_ms) > TAP_GAP_MAX_MS) {
+                    if (tap_count == 2) {
                         mapping_recenter(yaw, pitch, roll);
                         ESP_LOGI("fusion", "double-tap recenter");
-                        last_tap_ms = 0;  // consumed; need two fresh taps again
-                    } else {
-                        last_tap_ms = now_ms;  // first tap
+                    } else if (tap_count == 4) {
+                        ESP_LOGI("fusion", "quad-tap: toggle config mode");
+                        webconfig_request_toggle();
                     }
+                    tap_count = 0;
+                    last_tap_ms = 0;
                 }
                 mapping_update(yaw, pitch, roll);
             }
 
-            if (++log_div >= 10) {  // ~10 Hz
+            // Publish a snapshot for the config UI.
+            const freelook_config_t *cc = config_get();
+            s_snap.yaw = yaw;
+            s_snap.pitch = pitch;
+            s_snap.roll = roll;
+            s_snap.pan_us = para_ble_get_channel(cc->pan_ch);
+            s_snap.tilt_us = para_ble_get_channel(cc->tilt_ch);
+
+            if (++log_div >= 50) {  // ~2 Hz
                 log_div = 0;
-                ESP_LOGI("fusion", "ch pan %u  tilt %u",
-                         para_ble_get_channel(0), para_ble_get_channel(1));
+                ESP_LOGI("fusion", "ch pan %u  tilt %u", s_snap.pan_us, s_snap.tilt_us);
             }
         }
         vTaskDelay(pdMS_TO_TICKS(FUSION_PERIOD_MS));
@@ -180,6 +239,9 @@ void app_main(void)
 
     // Load persisted settings (orientation, gains, limits, taps, channels).
     config_init();
+
+    // Config web UI controller (quad-tap brings up the WiFi hotspot).
+    webconfig_init();
 
     // Milestone 1: stand up the PARA wireless trainer link and stream
     // centered channels. The IMU pipeline (M2+) is layered on later.

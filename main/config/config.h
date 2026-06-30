@@ -59,6 +59,12 @@ esp_err_t config_save(void);
 // Fill a config with factory defaults (does not save).
 void config_set_defaults(freelook_config_t *c);
 
+// Serialize the live config to a malloc'd JSON string (caller frees with free()).
+char *config_to_json(void);
+
+// Apply fields present in a JSON string to the live config (does not save).
+esp_err_t config_apply_json(const char *json);
+
 #ifdef __cplusplus
 }
 #endif

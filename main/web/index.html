@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!-- FreeLook config UI. Served from the device; no external resources. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>FreeLook Config</title>
+<style>
+  :root { --bg:#11141a; --card:#1b1f29; --fg:#e7ebf3; --mut:#8a93a6; --acc:#5b8cff; --ok:#3ecf8e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:15px/1.4 -apple-system,system-ui,Segoe UI,Roboto,sans-serif; }
+  header { padding:14px 16px; font-weight:700; font-size:18px; position:sticky; top:0;
+           background:var(--bg); border-bottom:1px solid #2a2f3b; z-index:5; }
+  header small { color:var(--mut); font-weight:400; font-size:12px; }
+  .wrap { padding:14px; max-width:560px; margin:0 auto; }
+  .card { background:var(--card); border:1px solid #2a2f3b; border-radius:12px;
+          padding:14px; margin-bottom:14px; }
+  h2 { margin:0 0 10px; font-size:14px; color:var(--mut); text-transform:uppercase;
+       letter-spacing:.05em; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:10px;
+         margin:8px 0; }
+  .row label { color:var(--fg); }
+  input[type=range] { width:55%; }
+  input[type=number], select, input[type=text] { background:#0e1117; color:var(--fg);
+    border:1px solid #2a2f3b; border-radius:8px; padding:7px 9px; font-size:14px; }
+  input[type=text] { width:100%; }
+  button { background:var(--acc); color:#fff; border:0; border-radius:9px;
+           padding:10px 12px; font-size:14px; font-weight:600; cursor:pointer; }
+  button.sec { background:#2a2f3b; }
+  button.ok { background:var(--ok); }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; }
+  .bar { height:14px; background:#0e1117; border-radius:7px; overflow:hidden; position:relative; }
+  .bar > i { position:absolute; top:0; bottom:0; left:50%; width:2px; background:var(--acc);
+             transition:left .05s linear; }
+  .barlbl { display:flex; justify-content:space-between; color:var(--mut); font-size:12px; }
+  .scene { perspective:600px; height:180px; display:flex; align-items:center;
+           justify-content:center; }
+  .obj { transform-style:preserve-3d; transition:transform .05s linear; }
+  /* head */
+  .head { width:96px; height:120px; transform-style:preserve-3d; }
+  .skull { position:absolute; width:96px; height:120px; border-radius:42px;
+           background:linear-gradient(#dfe6f2,#aeb8cc); transform:translateZ(28px); }
+  .goggles { position:absolute; width:104px; height:42px; top:34px; left:-4px;
+             background:#15171d; border-radius:12px; transform:translateZ(50px);
+             display:flex; gap:6px; align-items:center; justify-content:center; }
+  .lens { width:34px; height:26px; border-radius:6px;
+          background:#2b3550; box-shadow:inset 0 0 6px #5b8cff; }
+  .strap { position:absolute; width:120px; height:18px; top:46px; left:-12px;
+           background:#222630; transform:translateZ(-20px); border-radius:9px; }
+  /* axis box */
+  .cube { width:90px; height:90px; transform-style:preserve-3d; }
+  .face { position:absolute; width:90px; height:90px; border:1px solid #5b8cff66;
+          background:#5b8cff14; display:flex; align-items:center; justify-content:center;
+          font-weight:700; color:#cdd8f5; }
+  .f-front{ transform:translateZ(45px);} .f-back{ transform:rotateY(180deg) translateZ(45px);}
+  .f-right{ transform:rotateY(90deg) translateZ(45px);} .f-left{ transform:rotateY(-90deg) translateZ(45px);}
+  .f-top{ transform:rotateX(90deg) translateZ(45px);} .f-bot{ transform:rotateX(-90deg) translateZ(45px);}
+  .pill { background:#0e1117; border:1px solid #2a2f3b; border-radius:20px; padding:3px 10px;
+          color:var(--mut); font-size:12px; }
+  .mono { font-variant-numeric:tabular-nums; }
+  #toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+           background:var(--ok); color:#04210f; padding:9px 16px; border-radius:20px;
+           font-weight:600; opacity:0; transition:opacity .2s; }
+</style>
+</head>
+<body>
+<header>FreeLook <small id="status">connecting…</small></header>
+<div class="wrap">
+
+  <div class="card">
+    <h2>Live</h2>
+    <div class="scene"><div class="obj head" id="head">
+      <div class="skull"></div><div class="strap"></div>
+      <div class="goggles"><div class="lens"></div><div class="lens"></div></div>
+    </div></div>
+    <div class="barlbl"><span>Pan</span><span class="mono" id="panv">1500</span></div>
+    <div class="bar"><i id="panbar"></i></div>
+    <div class="barlbl" style="margin-top:8px"><span>Tilt</span><span class="mono" id="tiltv">1500</span></div>
+    <div class="bar"><i id="tiltbar"></i></div>
+    <div class="btns" style="margin-top:12px"><button class="ok" onclick="post('/recenter')">Recenter</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Orientation</h2>
+    <div class="scene"><div class="obj cube" id="cube">
+      <div class="face f-front">+X</div><div class="face f-back">-X</div>
+      <div class="face f-right">+Y</div><div class="face f-left">-Y</div>
+      <div class="face f-top">+Z</div><div class="face f-bot">-Z</div>
+    </div></div>
+    <div class="btns">
+      <button class="sec" onclick="rot(0)">Rotate X</button>
+      <button class="sec" onclick="rot(1)">Rotate Y</button>
+      <button class="sec" onclick="rot(2)">Rotate Z</button>
+      <button class="sec" onclick="flip()">Flip</button>
+    </div>
+    <div class="btns" style="margin-top:8px">
+      <button onclick="autodetect()">Auto-detect (hold in worn position)</button>
+    </div>
+    <div class="row"><label>Remap</label><span class="pill mono" id="remap">—</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Channels</h2>
+    <div class="row"><label>Pan &rarr; trainer ch</label><select id="pan_ch"></select></div>
+    <div class="row"><label>Pan enabled</label><input type="checkbox" id="pan_en"></div>
+    <div class="row"><label>Pan invert</label><input type="checkbox" id="pan_inv"></div>
+    <div class="row"><label>Tilt &rarr; trainer ch</label><select id="tilt_ch"></select></div>
+    <div class="row"><label>Tilt enabled</label><input type="checkbox" id="tilt_en"></div>
+    <div class="row"><label>Tilt invert</label><input type="checkbox" id="tilt_inv"></div>
+  </div>
+
+  <div class="card">
+    <h2>Response</h2>
+    <div class="row"><label>Pan sensitivity <span class="mono" id="pan_gain_l"></span></label>
+      <input type="range" id="pan_gain" min="1" max="30" step="0.5"></div>
+    <div class="row"><label>Tilt sensitivity <span class="mono" id="tilt_gain_l"></span></label>
+      <input type="range" id="tilt_gain" min="1" max="30" step="0.5"></div>
+    <div class="row"><label>Deadband (deg) <span class="mono" id="deadband_l"></span></label>
+      <input type="range" id="deadband" min="0" max="10" step="0.5"></div>
+    <div class="row"><label>Pan range (us)</label>
+      <span><input type="number" id="pan_min" style="width:70px"> – <input type="number" id="pan_max" style="width:70px"></span></div>
+    <div class="row"><label>Tilt range (us)</label>
+      <span><input type="number" id="tilt_min" style="width:70px"> – <input type="number" id="tilt_max" style="width:70px"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Taps</h2>
+    <div class="row"><label>Tap intensity <span class="mono" id="tap_l"></span></label>
+      <input type="range" id="tap" min="6" max="60" step="1"></div>
+    <p style="color:var(--mut);font-size:13px;margin:6px 0 0">
+      Double-tap = recenter. Quad-tap = toggle this hotspot (only when the radio is disconnected).</p>
+  </div>
+
+  <div class="card">
+    <h2>Device</h2>
+    <div class="row"><label>Name (BLE + hotspot)</label></div>
+    <input type="text" id="name" maxlength="18">
+    <div class="btns" style="margin-top:12px">
+      <button class="ok" onclick="save()">Save</button>
+      <button class="sec" onclick="doExport()">Export</button>
+      <button class="sec" onclick="document.getElementById('imp').click()">Import</button>
+      <button class="sec" onclick="reset_()">Reset</button>
+      <button class="sec" onclick="post('/exit')">Exit hotspot</button>
+    </div>
+    <input type="file" id="imp" accept="application/json" style="display:none">
+  </div>
+
+</div>
+<div id="toast"></div>
+<script>
+let cfg = {};
+const $ = id => document.getElementById(id);
+const numIds = ["pan_gain","tilt_gain","deadband","pan_min","pan_max","tilt_min","tilt_max","tap"];
+const chkIds = ["pan_en","tilt_en","pan_inv","tilt_inv"];
+
+function fillChannels(){
+  for(const s of [$("pan_ch"),$("tilt_ch")]){
+    s.innerHTML="";
+    for(let i=0;i<8;i++){ const o=document.createElement("option"); o.value=i; o.text="TR"+(i+1); s.add(o); }
+  }
+}
+function toUI(){
+  $("pan_ch").value=cfg.pan_ch; $("tilt_ch").value=cfg.tilt_ch;
+  $("pan_en").checked=!!cfg.pan_en; $("tilt_en").checked=!!cfg.tilt_en;
+  $("pan_inv").checked=cfg.pan_inv<0; $("tilt_inv").checked=cfg.tilt_inv<0;
+  $("pan_gain").value=cfg.pan_gain; $("tilt_gain").value=cfg.tilt_gain;
+  $("deadband").value=cfg.deadband;
+  $("pan_min").value=cfg.pan_min; $("pan_max").value=cfg.pan_max;
+  $("tilt_min").value=cfg.tilt_min; $("tilt_max").value=cfg.tilt_max;
+  $("tap").value=cfg.tap; $("name").value=cfg.name||"";
+  labels(); showRemap();
+}
+function fromUI(){
+  cfg.pan_ch=+$("pan_ch").value; cfg.tilt_ch=+$("tilt_ch").value;
+  cfg.pan_en=$("pan_en").checked?1:0; cfg.tilt_en=$("tilt_en").checked?1:0;
+  cfg.pan_inv=$("pan_inv").checked?-1:1; cfg.tilt_inv=$("tilt_inv").checked?-1:1;
+  cfg.pan_gain=+$("pan_gain").value; cfg.tilt_gain=+$("tilt_gain").value;
+  cfg.deadband=+$("deadband").value;
+  cfg.pan_min=+$("pan_min").value; cfg.pan_max=+$("pan_max").value;
+  cfg.tilt_min=+$("tilt_min").value; cfg.tilt_max=+$("tilt_max").value;
+  cfg.tap=+$("tap").value; cfg.name=$("name").value;
+}
+function labels(){
+  $("pan_gain_l").textContent=(+$("pan_gain").value).toFixed(1);
+  $("tilt_gain_l").textContent=(+$("tilt_gain").value).toFixed(1);
+  $("deadband_l").textContent=(+$("deadband").value).toFixed(1);
+  $("tap_l").textContent=(+$("tap").value);
+}
+function showRemap(){ $("remap").textContent = "["+cfg.remap.join(", ")+"]"; }
+
+// --- orientation matrix helpers (remap <-> 3x3 signed permutation) ---
+function remapToM(r){ let M=[[0,0,0],[0,0,0],[0,0,0]];
+  for(let i=0;i<3;i++){ let a=Math.abs(r[i])-1, s=r[i]<0?-1:1; M[i][a]=s; } return M; }
+function mToRemap(M){ let r=[0,0,0];
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(M[i][j]!==0) r[i]=(j+1)*(M[i][j]<0?-1:1); return r; }
+function mul(A,B){ let C=[[0,0,0],[0,0,0],[0,0,0]];
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){let s=0;for(let k=0;k<3;k++)s+=A[i][k]*B[k][j];C[i][j]=s;} return C; }
+const RX=[[1,0,0],[0,0,-1],[0,1,0]], RY=[[0,0,1],[0,1,0],[-1,0,0]], RZ=[[0,-1,0],[1,0,0],[0,0,1]];
+function rot(axis){ let R=[RX,RY,RZ][axis]; cfg.remap=mToRemap(mul(R,remapToM(cfg.remap))); showRemap(); }
+function flip(){ cfg.remap=mToRemap(mul(mul(RX,RX),remapToM(cfg.remap))); showRemap(); }
+
+// --- live ---
+function live(d){
+  $("status").textContent = "live";
+  $("panv").textContent=d.pan; $("tiltv").textContent=d.tilt;
+  $("panbar").style.left = (((d.pan-988)/(2012-988))*100)+"%";
+  $("tiltbar").style.left = (((d.tilt-988)/(2012-988))*100)+"%";
+  $("head").style.transform = `rotateY(${d.y}deg) rotateX(${-d.p}deg) rotateZ(${d.r}deg)`;
+  $("cube").style.transform = `rotateX(-20deg) rotateY(${d.y}deg) rotateX(${-d.p}deg) rotateZ(${d.r}deg)`;
+}
+function connectWS(){
+  const ws = new WebSocket("ws://"+location.host+"/ws");
+  ws.onmessage = e => { try{ live(JSON.parse(e.data)); }catch(_){} };
+  ws.onclose = () => { $("status").textContent="reconnecting…"; setTimeout(connectWS,1000); };
+}
+
+// --- io ---
+function toast(t){ const e=$("toast"); e.textContent=t; e.style.opacity=1; setTimeout(()=>e.style.opacity=0,1200); }
+function post(u,b){ return fetch(u,{method:"POST",body:b||""}); }
+async function save(){ fromUI(); await post("/config", JSON.stringify(cfg)); toast("Saved"); }
+async function autodetect(){ await post("/autodetect"); toast("Orientation captured"); }
+function doExport(){ fromUI(); const b=new Blob([JSON.stringify(cfg,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="freelook.json"; a.click(); }
+function reset_(){ if(confirm("Reset all settings to defaults?")) post("/config",JSON.stringify({reset:1})).then(load); }
+$("imp").onchange = e => { const f=e.target.files[0]; if(!f)return; const r=new FileReader();
+  r.onload=()=>{ try{ cfg=JSON.parse(r.result); toUI(); toast("Imported (Save to apply)"); }catch(_){ toast("Bad file"); } }; r.readAsText(f); };
+
+numIds.forEach(id=>$(id).addEventListener("input",labels));
+async function load(){ cfg = await (await fetch("/config")).json(); fillChannels(); toUI(); }
+load(); connectWS();
+</script>
+</body>
+</html>

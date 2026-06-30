@@ -66,6 +66,7 @@ static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_fff6_val_handle;
 static bool s_boot_sent;
 static TickType_t s_stream_at_tick;
+static bool s_paused = false;   // true while WiFi config mode owns the radio
 
 static void para_advertise(void);
 
@@ -238,8 +239,31 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     }
 }
 
+bool para_ble_is_connected(void)
+{
+    return s_conn_handle != BLE_HS_CONN_HANDLE_NONE;
+}
+
+void para_ble_pause(void)
+{
+    s_paused = true;
+    ble_gap_adv_stop();
+    if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+        ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+    }
+}
+
+void para_ble_resume(void)
+{
+    s_paused = false;
+    para_advertise();
+}
+
 static void para_advertise(void)
 {
+    if (s_paused) {
+        return;
+    }
     const char *name = ble_svc_gap_device_name();
 
     // Advertising packet: flags + the FrSky service UUIDs (0xFFF0, 0xFFFA).

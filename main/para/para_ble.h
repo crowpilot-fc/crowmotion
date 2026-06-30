@@ -18,6 +18,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,14 @@ void para_ble_set_channel(uint8_t ch, uint16_t value_us);
 
 // Read back the current value (microseconds) of a channel.
 uint16_t para_ble_get_channel(uint8_t ch);
+
+// True while a radio (central) is connected.
+bool para_ble_is_connected(void);
+
+// Pause the radio link (stop advertising, drop any connection) so WiFi config
+// mode can run, and resume it afterwards.
+void para_ble_pause(void);
+void para_ble_resume(void);
 
 #ifdef __cplusplus
 }

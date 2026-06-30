@@ -11,6 +11,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
+#include "cJSON.h"
 
 static const char *TAG = "config";
 
@@ -73,6 +74,82 @@ void config_init(void)
 freelook_config_t *config_get(void)
 {
     return &s_cfg;
+}
+
+char *config_to_json(void)
+{
+    freelook_config_t *c = &s_cfg;
+    cJSON *j = cJSON_CreateObject();
+    cJSON_AddNumberToObject(j, "pan_ch", c->pan_ch);
+    cJSON_AddNumberToObject(j, "tilt_ch", c->tilt_ch);
+    cJSON_AddNumberToObject(j, "pan_en", c->pan_enabled);
+    cJSON_AddNumberToObject(j, "tilt_en", c->tilt_enabled);
+    cJSON_AddNumberToObject(j, "pan_gain", c->pan_gain);
+    cJSON_AddNumberToObject(j, "tilt_gain", c->tilt_gain);
+    cJSON_AddNumberToObject(j, "pan_inv", c->pan_invert);
+    cJSON_AddNumberToObject(j, "tilt_inv", c->tilt_invert);
+    cJSON_AddNumberToObject(j, "deadband", c->deadband_deg);
+    cJSON_AddNumberToObject(j, "pan_center", c->pan_center);
+    cJSON_AddNumberToObject(j, "pan_min", c->pan_min);
+    cJSON_AddNumberToObject(j, "pan_max", c->pan_max);
+    cJSON_AddNumberToObject(j, "tilt_center", c->tilt_center);
+    cJSON_AddNumberToObject(j, "tilt_min", c->tilt_min);
+    cJSON_AddNumberToObject(j, "tilt_max", c->tilt_max);
+    int rm[3] = {c->remap[0], c->remap[1], c->remap[2]};
+    cJSON_AddItemToObject(j, "remap", cJSON_CreateIntArray(rm, 3));
+    cJSON_AddNumberToObject(j, "tap", c->tap_intensity);
+    cJSON_AddStringToObject(j, "name", c->name);
+    char *out = cJSON_PrintUnformatted(j);
+    cJSON_Delete(j);
+    return out;
+}
+
+esp_err_t config_apply_json(const char *json)
+{
+    cJSON *j = cJSON_Parse(json);
+    if (!j) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (cJSON_GetObjectItem(j, "reset")) {
+        config_set_defaults(&s_cfg);
+        cJSON_Delete(j);
+        return ESP_OK;
+    }
+    freelook_config_t *c = &s_cfg;
+    cJSON *it;
+#define GET_NUM(key, field)                                              \
+    if ((it = cJSON_GetObjectItem(j, key)) && cJSON_IsNumber(it)) {       \
+        c->field = it->valuedouble;                                      \
+    }
+    GET_NUM("pan_ch", pan_ch);
+    GET_NUM("tilt_ch", tilt_ch);
+    GET_NUM("pan_en", pan_enabled);
+    GET_NUM("tilt_en", tilt_enabled);
+    GET_NUM("pan_gain", pan_gain);
+    GET_NUM("tilt_gain", tilt_gain);
+    GET_NUM("pan_inv", pan_invert);
+    GET_NUM("tilt_inv", tilt_invert);
+    GET_NUM("deadband", deadband_deg);
+    GET_NUM("pan_center", pan_center);
+    GET_NUM("pan_min", pan_min);
+    GET_NUM("pan_max", pan_max);
+    GET_NUM("tilt_center", tilt_center);
+    GET_NUM("tilt_min", tilt_min);
+    GET_NUM("tilt_max", tilt_max);
+    GET_NUM("tap", tap_intensity);
+#undef GET_NUM
+    cJSON *rm = cJSON_GetObjectItem(j, "remap");
+    if (rm && cJSON_IsArray(rm) && cJSON_GetArraySize(rm) == 3) {
+        for (int i = 0; i < 3; i++) {
+            c->remap[i] = cJSON_GetArrayItem(rm, i)->valueint;
+        }
+    }
+    if ((it = cJSON_GetObjectItem(j, "name")) && cJSON_IsString(it)) {
+        strncpy(c->name, it->valuestring, sizeof(c->name) - 1);
+        c->name[sizeof(c->name) - 1] = '\0';
+    }
+    cJSON_Delete(j);
+    return ESP_OK;
 }
 
 esp_err_t config_save(void)
