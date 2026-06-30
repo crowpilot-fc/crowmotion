@@ -30,10 +30,24 @@ static const char *TAG = "freelook";
 #define BIAS_SAMPLES 100              // ~1 s startup gyro-bias estimate
 #define SETTLE_ITERS 50               // ~0.5 s for fusion to converge before centering
 #define DEG_TO_RAD 0.01745329252f
+#define STILL_DPS 2.0f                // gyro below this (bias-corrected) = "still"
+#define BIAS_ALPHA 0.002f             // gyro-bias tracking rate while still (M4)
 
-// M3: read the IMU, run Madgwick 6DOF fusion, and log yaw/pitch/roll.
-// A short startup average removes the bulk of the gyro bias so the angles hold
-// still at rest; proper continuous auto-calibration is M4.
+// Board-orientation remap for the temple mount: the board sits vertical with
+// its +X axis up and +Z pointing out the side of the head (confirmed from the
+// gravity reading, ~+1g on X when worn). Rotate the IMU axes into the canonical
+// frame (Z up) so the fusion's yaw = pan and pitch = tilt. Signs are corrected
+// per-axis in the mapping layer.
+static void board_remap(imu_sample_t *s)
+{
+    float ax = s->ax, ay = s->ay, az = s->az;
+    float gx = s->gx, gy = s->gy, gz = s->gz;
+    s->ax = ay;  s->ay = az;  s->az = ax;
+    s->gx = gy;  s->gy = gz;  s->gz = gx;
+}
+
+// Read the IMU, run Madgwick 6DOF fusion with continuous gyro auto-calibration
+// (M4) and the temple-mount remap, then drive the pan/tilt channels (M5).
 static void fusion_task(void *arg)
 {
     madgwick_t filt;
@@ -45,6 +59,7 @@ static void fusion_task(void *arg)
     for (int i = 0; i < BIAS_SAMPLES; i++) {
         imu_sample_t s;
         if (mpu6500_read(&s) == ESP_OK) {
+            board_remap(&s);
             bx += s.gx;
             by += s.gy;
             bz += s.gz;
@@ -62,6 +77,7 @@ static void fusion_task(void *arg)
     // Seed orientation from gravity so fusion starts level-correct (no ramp).
     imu_sample_t s0;
     if (mpu6500_read(&s0) == ESP_OK) {
+        board_remap(&s0);
         madgwick_set_from_accel(&filt, s0.ax, s0.ay, s0.az);
     }
 
@@ -71,6 +87,7 @@ static void fusion_task(void *arg)
     for (;;) {
         imu_sample_t s;
         if (mpu6500_read(&s) == ESP_OK) {
+            board_remap(&s);
             int64_t now = esp_timer_get_time();
             float dt = (now - t_prev) / 1e6f;
             t_prev = now;
@@ -78,10 +95,20 @@ static void fusion_task(void *arg)
                 dt = FUSION_PERIOD_MS / 1000.0f;  // guard against jitter
             }
 
-            float gx = (s.gx - bx) * DEG_TO_RAD;
-            float gy = (s.gy - by) * DEG_TO_RAD;
-            float gz = (s.gz - bz) * DEG_TO_RAD;
-            madgwick_update_imu(&filt, gx, gy, gz, s.ax, s.ay, s.az, dt);
+            // Continuous gyro auto-calibration (M4): while the board is still,
+            // slowly track the gyro bias so yaw does not drift.
+            float dgx = s.gx - bx, dgy = s.gy - by, dgz = s.gz - bz;
+            if (fabsf(dgx) < STILL_DPS && fabsf(dgy) < STILL_DPS &&
+                fabsf(dgz) < STILL_DPS) {
+                bx += BIAS_ALPHA * dgx;
+                by += BIAS_ALPHA * dgy;
+                bz += BIAS_ALPHA * dgz;
+                dgx = s.gx - bx;
+                dgy = s.gy - by;
+                dgz = s.gz - bz;
+            }
+            madgwick_update_imu(&filt, dgx * DEG_TO_RAD, dgy * DEG_TO_RAD,
+                                dgz * DEG_TO_RAD, s.ax, s.ay, s.az, dt);
 
             float yaw, pitch, roll;
             madgwick_get_euler_deg(&filt, &yaw, &pitch, &roll);
@@ -99,8 +126,7 @@ static void fusion_task(void *arg)
 
             if (++log_div >= 10) {  // ~10 Hz
                 log_div = 0;
-                ESP_LOGI("fusion", "yaw % 7.1f  pitch % 7.1f  roll % 7.1f",
-                         yaw, pitch, roll);
+                ESP_LOGI("fusion", "pan % 7.1f  tilt % 7.1f", yaw, pitch);
             }
         }
         vTaskDelay(pdMS_TO_TICKS(FUSION_PERIOD_MS));

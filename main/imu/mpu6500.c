@@ -61,7 +61,13 @@ static esp_err_t reg_write(uint8_t reg, uint8_t val)
 
 static esp_err_t reg_read(uint8_t reg, uint8_t *buf, size_t len)
 {
-    return i2c_master_transmit_receive(s_dev, &reg, 1, buf, len, MPU_IO_TIMEOUT_MS);
+    // Separate write-then-read (not a repeated-start transmit_receive), which is
+    // more tolerant of marginal pull-ups on this board.
+    esp_err_t e = i2c_master_transmit(s_dev, &reg, 1, MPU_IO_TIMEOUT_MS);
+    if (e != ESP_OK) {
+        return e;
+    }
+    return i2c_master_receive(s_dev, buf, len, MPU_IO_TIMEOUT_MS);
 }
 
 esp_err_t mpu6500_init(void)
@@ -91,10 +97,33 @@ esp_err_t mpu6500_init(void)
         return err;
     }
 
-    // Probe WHO_AM_I. Retry a few times: the first transaction after bus setup
-    // can return ESP_ERR_INVALID_STATE while the lines settle high.
+    // Detect with a probe (robust even when a plain transaction reports the bus
+    // busy). Check both 0x68 and 0x69 so a floating AD0 is distinguishable from
+    // a dead bus.
+    uint8_t found = 0;
+    for (int attempt = 0; attempt < 10 && found == 0; attempt++) {
+        if (i2c_master_probe(s_bus, 0x68, 50) == ESP_OK) {
+            found = 0x68;
+        } else if (i2c_master_probe(s_bus, 0x69, 50) == ESP_OK) {
+            found = 0x69;
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+    }
+    if (found == 0) {
+        ESP_LOGW(TAG, "No MPU on SDA=GPIO%d SCL=GPIO%d at 0x68 or 0x69. "
+                      "Check 3V3, GND, and the SDA/SCL solder joints.",
+                 MPU_PIN_SDA, MPU_PIN_SCL);
+        return ESP_ERR_NOT_FOUND;
+    }
+    if (found != MPU_ADDR) {
+        ESP_LOGW(TAG, "MPU answers at 0x%02X, not 0x%02X: AD0 is floating, "
+                      "tie AD0 to GND.", found, MPU_ADDR);
+        return ESP_ERR_NOT_FOUND;
+    }
+
     uint8_t who = 0;
-    for (int attempt = 0; attempt < 5; attempt++) {
+    for (int attempt = 0; attempt < 10; attempt++) {
         err = reg_read(REG_WHO_AM_I, &who, 1);
         if (err == ESP_OK) {
             break;
@@ -102,9 +131,8 @@ esp_err_t mpu6500_init(void)
         vTaskDelay(pdMS_TO_TICKS(20));
     }
     if (err != ESP_OK) {
-        ESP_LOGW(TAG, "No response at 0x%02X (%s). Check wiring: SDA=GPIO%d, "
-                      "SCL=GPIO%d, AD0=GND, VCC=3V3.",
-                 MPU_ADDR, esp_err_to_name(err), MPU_PIN_SDA, MPU_PIN_SCL);
+        ESP_LOGW(TAG, "probe OK but WHO_AM_I read failed (%s) at 0x%02X",
+                 esp_err_to_name(err), MPU_ADDR);
         return ESP_ERR_NOT_FOUND;
     }
     if (who != WHO_AM_I_MPU6500) {

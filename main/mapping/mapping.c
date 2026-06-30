@@ -57,8 +57,9 @@ void mapping_update(float yaw_deg, float pitch_deg, float roll_deg)
         mapping_recenter(yaw_deg, pitch_deg, roll_deg);
     }
 
+    // v1 outputs two axes: pan (yaw) and tilt (pitch). Roll is not mapped.
     float ang[3] = {yaw_deg, pitch_deg, roll_deg};
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         float rel = wrap180(ang[i] - s_ref[i]);
         float us = (float)FREELOOK_PARA_CH_CENTER + s_cfg[i].invert * s_cfg[i].gain * rel;
         if (us < (float)FREELOOK_PARA_CH_MIN) us = FREELOOK_PARA_CH_MIN;
