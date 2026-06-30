@@ -91,6 +91,11 @@ void para_ble_set_channel(uint8_t ch, uint16_t value_us)
     s_channels[ch] = value_us;
 }
 
+uint16_t para_ble_get_channel(uint8_t ch)
+{
+    return (ch < FREELOOK_PARA_NUM_CHANNELS) ? s_channels[ch] : 0;
+}
+
 // --- PARA frame encoding -----------------------------------------------------
 
 // Append one byte: update XOR CRC, byte-stuff START_STOP/BYTE_STUFF values.

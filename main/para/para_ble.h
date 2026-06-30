@@ -41,6 +41,9 @@ int para_ble_start(void);
 // Safe to call from the tracker task once fusion/mapping is online (M5).
 void para_ble_set_channel(uint8_t ch, uint16_t value_us);
 
+// Read back the current value (microseconds) of a channel.
+uint16_t para_ble_get_channel(uint8_t ch);
+
 #ifdef __cplusplus
 }
 #endif
