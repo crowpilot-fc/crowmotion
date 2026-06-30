@@ -10,6 +10,7 @@ idf_component_register(
         "mapping/mapping.c"
         "config/config.c"
         "web/webconfig.c"
+        "led/led.c"
     INCLUDE_DIRS
         "."
         "para"
@@ -18,12 +19,14 @@ idf_component_register(
         "mapping"
         "config"
         "web"
+        "led"
     EMBED_FILES
         "web/index.html"
     PRIV_REQUIRES
         bt
         nvs_flash
         esp_driver_i2c
+        esp_driver_gpio
         esp_timer
         json
         esp_wifi

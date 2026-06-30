@@ -34,6 +34,8 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
+#include "led.h"
+
 static const char *TAG = "para";
 
 // --- PARA wire protocol constants ---
@@ -213,6 +215,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             s_conn_handle = event->connect.conn_handle;
             s_boot_sent = false;
             s_stream_at_tick = xTaskGetTickCount() + pdMS_TO_TICKS(PARA_CONNECT_SETTLE_MS);
+            led_set(LED_CONNECTED);
             ESP_LOGI(TAG, "Radio connected (handle %d), settling before stream",
                      s_conn_handle);
         } else {
@@ -227,6 +230,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                  event->disconnect.reason);
         s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
         s_boot_sent = false;
+        led_set(LED_SEARCHING);
         para_advertise();
         return 0;
 

@@ -21,6 +21,7 @@
 #include "config.h"
 #include "tracker.h"
 #include "webconfig.h"
+#include "led.h"
 #include "para_ble.h"
 #include "mpu6500.h"
 #include "madgwick.h"
@@ -197,6 +198,7 @@ static void fusion_task(void *arg)
                     (now_ms - last_tap_ms) > TAP_GAP_MAX_MS) {
                     if (tap_count == 2) {
                         mapping_recenter(yaw, pitch, roll);
+                        led_flash();
                         ESP_LOGI("fusion", "double-tap recenter");
                     } else if (tap_count == 4) {
                         ESP_LOGI("fusion", "quad-tap: toggle config mode");
@@ -229,6 +231,8 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "FreeLook starting (%s)", FREELOOK_BOARD_NAME);
 
+    led_init();  // status LED: starts in "searching" (slow heartbeat)
+
     // NVS is needed by the BLE stack and, later (M7), by settings persistence.
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -255,6 +259,7 @@ void app_main(void)
     if (mpu6500_init() == ESP_OK) {
         xTaskCreate(fusion_task, "fusion", 4096, NULL, 4, NULL);
     } else {
+        led_fault(2);  // blink-code 2 = IMU not found
         ESP_LOGW(TAG, "Continuing without IMU. Check the wiring (pins logged "
                       "above), AD0=GND, VCC=3V3, then reset.");
     }

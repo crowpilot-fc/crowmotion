@@ -29,6 +29,7 @@
 #include "tracker.h"
 #include "para_ble.h"
 #include "version.h"
+#include "led.h"
 
 static const char *TAG = "webcfg";
 
@@ -175,6 +176,7 @@ static void ota_check_task(void *arg)
         vTaskDelete(NULL);
     }
     snprintf(s_ota_status, sizeof(s_ota_status), "updating to %s...", ver->valuestring);
+    led_set(LED_OTA);
     char ota_url[200];
     strncpy(ota_url, url->valuestring, sizeof(ota_url) - 1);
     ota_url[sizeof(ota_url) - 1] = '\0';
@@ -224,6 +226,7 @@ static esp_err_t h_post_update(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "ota begin failed");
         return ESP_FAIL;
     }
+    led_set(LED_OTA);
     char buf[1024];
     int remaining = req->content_len;
     bool ok = remaining > 0;
@@ -385,6 +388,7 @@ static void enter_config(void)
     wifi_ap_start();
     httpd_start_all();
     s_active = true;
+    led_set(LED_CONFIG);
 }
 
 static void exit_config(void)
@@ -397,6 +401,7 @@ static void exit_config(void)
     s_ws_fd = -1;
     wifi_ap_stop();
     para_ble_resume();
+    led_set(LED_SEARCHING);
     ESP_LOGI(TAG, "config mode off, radio link resumed");
 }
 
