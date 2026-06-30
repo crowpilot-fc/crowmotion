@@ -13,11 +13,13 @@
 #include "esp_log.h"
 #include "cJSON.h"
 
+#include "version.h"
+
 static const char *TAG = "config";
 
 #define CFG_NVS_NAMESPACE "freelook"
 #define CFG_NVS_KEY "cfg"
-#define CFG_VERSION 1   // bump when the struct layout changes incompatibly
+#define CFG_VERSION 2   // bump when the struct layout changes incompatibly
 
 static freelook_config_t s_cfg;
 
@@ -99,6 +101,8 @@ char *config_to_json(void)
     cJSON_AddItemToObject(j, "remap", cJSON_CreateIntArray(rm, 3));
     cJSON_AddNumberToObject(j, "tap", c->tap_intensity);
     cJSON_AddStringToObject(j, "name", c->name);
+    cJSON_AddStringToObject(j, "wifi_ssid", c->wifi_ssid);  // password not exposed
+    cJSON_AddStringToObject(j, "version", FREELOOK_VERSION);
     char *out = cJSON_PrintUnformatted(j);
     cJSON_Delete(j);
     return out;
@@ -147,6 +151,14 @@ esp_err_t config_apply_json(const char *json)
     if ((it = cJSON_GetObjectItem(j, "name")) && cJSON_IsString(it)) {
         strncpy(c->name, it->valuestring, sizeof(c->name) - 1);
         c->name[sizeof(c->name) - 1] = '\0';
+    }
+    if ((it = cJSON_GetObjectItem(j, "wifi_ssid")) && cJSON_IsString(it)) {
+        strncpy(c->wifi_ssid, it->valuestring, sizeof(c->wifi_ssid) - 1);
+        c->wifi_ssid[sizeof(c->wifi_ssid) - 1] = '\0';
+    }
+    if ((it = cJSON_GetObjectItem(j, "wifi_pass")) && cJSON_IsString(it)) {
+        strncpy(c->wifi_pass, it->valuestring, sizeof(c->wifi_pass) - 1);
+        c->wifi_pass[sizeof(c->wifi_pass) - 1] = '\0';
     }
     cJSON_Delete(j);
     return ESP_OK;

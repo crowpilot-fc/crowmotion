@@ -1,6 +1,9 @@
-# FreeLook partition table for the XIAO ESP32-C3 (4MB flash).
-# nvs holds head-tracker settings (gains, centers, limits, axis map) for M7.
+# FreeLook partition table for the ESP32-C3 (4MB flash), OTA-capable.
+# Two app slots (ota_0/ota_1) plus otadata so firmware can self-update; nvs
+# holds settings. The app (~1.15MB) fits in each 1.5MB slot.
 # Name,     Type, SubType,  Offset,   Size
 nvs,        data, nvs,      0x9000,   0x6000
-phy_init,   data, phy,      0xf000,   0x1000
-factory,    app,  factory,  0x10000,  0x180000
+otadata,    data, ota,      0xf000,   0x2000
+phy_init,   data, phy,      0x11000,  0x1000
+ota_0,      app,  ota_0,    0x20000,  0x180000
+ota_1,      app,  ota_1,    0x1a0000, 0x180000

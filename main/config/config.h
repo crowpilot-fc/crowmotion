@@ -45,6 +45,10 @@ typedef struct {
 
     // --- Identity ---
     char name[20];        // BLE device name and AP SSID base
+
+    // --- Home WiFi (station) for internet / server OTA ---
+    char wifi_ssid[33];
+    char wifi_pass[65];
 } freelook_config_t;
 
 // Load config from NVS, or apply defaults if absent/invalid. Call once at boot.

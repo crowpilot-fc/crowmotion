@@ -15,7 +15,11 @@ CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
 # Advertised device name (the radio sees this as the trainer source).
 CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="FreeLook"
 
-# --- Partition table (custom: adds an NVS region for settings persistence) ---
+# --- Flash size (4MB on the C3 Super Mini / XIAO; needed for OTA partitions) ---
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+
+# --- Partition table (custom: dual-OTA + NVS) ---
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 

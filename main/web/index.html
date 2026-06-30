@@ -133,6 +133,20 @@
   </div>
 
   <div class="card">
+    <h2>Firmware</h2>
+    <div class="row"><label>Version</label><span class="pill mono" id="ver">—</span></div>
+    <div class="row"><label>Home WiFi (for updates)</label></div>
+    <input type="text" id="wifi_ssid" placeholder="SSID">
+    <input type="password" id="wifi_pass" placeholder="password (blank = keep current)" style="margin-top:8px">
+    <div class="btns" style="margin-top:10px">
+      <button onclick="checkUpdate()">Check for updates</button>
+      <button class="sec" onclick="document.getElementById('fw').click()">Update from file</button>
+    </div>
+    <div class="row"><label>Status</label><span class="pill" id="otastat">idle</span></div>
+    <input type="file" id="fw" accept=".bin" style="display:none">
+  </div>
+
+  <div class="card">
     <h2>Device</h2>
     <div class="row"><label>Name (BLE + hotspot)</label></div>
     <input type="text" id="name" maxlength="18">
@@ -169,6 +183,7 @@ function toUI(){
   $("pan_min").value=cfg.pan_min; $("pan_max").value=cfg.pan_max;
   $("tilt_min").value=cfg.tilt_min; $("tilt_max").value=cfg.tilt_max;
   $("tap").value=cfg.tap; $("name").value=cfg.name||"";
+  $("wifi_ssid").value=cfg.wifi_ssid||""; $("ver").textContent=cfg.version||"?";
   labels(); showRemap();
 }
 function fromUI(){
@@ -180,6 +195,8 @@ function fromUI(){
   cfg.pan_min=+$("pan_min").value; cfg.pan_max=+$("pan_max").value;
   cfg.tilt_min=+$("tilt_min").value; cfg.tilt_max=+$("tilt_max").value;
   cfg.tap=+$("tap").value; cfg.name=$("name").value;
+  cfg.wifi_ssid=$("wifi_ssid").value;
+  if($("wifi_pass").value) cfg.wifi_pass=$("wifi_pass").value;  // only change if typed
 }
 function labels(){
   $("pan_gain_l").textContent=(+$("pan_gain").value).toFixed(1);
@@ -223,6 +240,15 @@ async function autodetect(){ await post("/autodetect"); toast("Orientation captu
 function doExport(){ fromUI(); const b=new Blob([JSON.stringify(cfg,null,2)],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="freelook.json"; a.click(); }
 function reset_(){ if(confirm("Reset all settings to defaults?")) post("/config",JSON.stringify({reset:1})).then(load); }
+let pollT;
+function pollStatus(){ clearInterval(pollT); pollT=setInterval(async()=>{
+  try{ const s=await(await fetch("/status")).text(); $("otastat").textContent=s;
+    if(/up to date|failed|no internet|reboot|bad manifest|could not/i.test(s)) clearInterval(pollT);
+  }catch(_){ clearInterval(pollT); } },1500); }
+async function checkUpdate(){ await save(); await post("/checkupdate"); $("otastat").textContent="checking…"; pollStatus(); }
+$("fw").onchange = e => { const f=e.target.files[0]; if(!f)return; $("otastat").textContent="uploading…";
+  fetch("/update",{method:"POST",body:f}).then(r=>r.text()).then(t=>$("otastat").textContent=t)
+  .catch(()=>$("otastat").textContent="upload failed (device may be rebooting)"); };
 $("imp").onchange = e => { const f=e.target.files[0]; if(!f)return; const r=new FileReader();
   r.onload=()=>{ try{ cfg=JSON.parse(r.result); toUI(); toast("Imported (Save to apply)"); }catch(_){ toast("Bad file"); } }; r.readAsText(f); };
 
