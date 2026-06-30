@@ -8,12 +8,14 @@ idf_component_register(
         "imu/mpu6500.c"
         "fusion/madgwick.c"
         "mapping/mapping.c"
+        "config/config.c"
     INCLUDE_DIRS
         "."
         "para"
         "imu"
         "fusion"
         "mapping"
+        "config"
     PRIV_REQUIRES
         bt
         nvs_flash

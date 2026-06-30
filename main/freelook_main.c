@@ -18,6 +18,7 @@
 #include "freertos/task.h"
 
 #include "board.h"
+#include "config.h"
 #include "para_ble.h"
 #include "mpu6500.h"
 #include "madgwick.h"
@@ -32,22 +33,28 @@ static const char *TAG = "freelook";
 #define DEG_TO_RAD 0.01745329252f
 #define STILL_DPS 2.0f                // gyro below this (bias-corrected) = "still"
 #define BIAS_ALPHA 0.002f             // gyro-bias tracking rate while still (M4)
-#define TAP_JERK_G_PER_S 20.0f        // accel-magnitude jerk above this = a tap (M6)
 #define TAP_GYRO_MAX_DPS 40.0f        // ignore "taps" while rotating faster than this
 #define TAP_GAP_MIN_MS 80             // double-tap: 2nd tap this long after the 1st
 #define TAP_GAP_MAX_MS 600
 
-// Board-orientation remap for the temple mount: the board sits vertical with
-// its +X axis up and +Z pointing out the side of the head (confirmed from the
-// gravity reading, ~+1g on X when worn). Rotate the IMU axes into the canonical
-// frame (Z up) so the fusion's yaw = pan and pitch = tilt. Signs are corrected
-// per-axis in the mapping layer.
+// Board-orientation remap: rotate the IMU axes into the canonical frame (Z up)
+// so the fusion's yaw = pan and pitch = tilt, using the configurable remap.
+// remap[i] = signed (1-based) IMU axis feeding canonical axis i. The default
+// (temple mount) is {+2,+3,+1}: canonical x<-imu y, y<-imu z, z<-imu x.
 static void board_remap(imu_sample_t *s)
 {
-    float ax = s->ax, ay = s->ay, az = s->az;
-    float gx = s->gx, gy = s->gy, gz = s->gz;
-    s->ax = ay;  s->ay = az;  s->az = ax;
-    s->gx = gy;  s->gy = gz;  s->gz = gx;
+    const int8_t *r = config_get()->remap;
+    float a[3] = {s->ax, s->ay, s->az};
+    float g[3] = {s->gx, s->gy, s->gz};
+    float ao[3], go[3];
+    for (int i = 0; i < 3; i++) {
+        int idx = (r[i] < 0 ? -r[i] : r[i]) - 1;  // 0..2
+        float sign = (r[i] < 0) ? -1.0f : 1.0f;
+        ao[i] = sign * a[idx];
+        go[i] = sign * g[idx];
+    }
+    s->ax = ao[0];  s->ay = ao[1];  s->az = ao[2];
+    s->gx = go[0];  s->gy = go[1];  s->gz = go[2];
 }
 
 // Read the IMU, run Madgwick 6DOF fusion with continuous gyro auto-calibration
@@ -135,7 +142,7 @@ static void fusion_task(void *arg)
             } else {
                 // A tap is a jerk spike while the board is not rotating fast.
                 float gmag = sqrtf(dgx * dgx + dgy * dgy + dgz * dgz);
-                if (jerk > TAP_JERK_G_PER_S && gmag < TAP_GYRO_MAX_DPS) {
+                if (jerk > config_get()->tap_intensity && gmag < TAP_GYRO_MAX_DPS) {
                     int64_t now_ms = now / 1000;
                     int64_t gap = now_ms - last_tap_ms;
                     if (gap > TAP_GAP_MIN_MS && gap < TAP_GAP_MAX_MS) {
@@ -170,6 +177,9 @@ void app_main(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+
+    // Load persisted settings (orientation, gains, limits, taps, channels).
+    config_init();
 
     // Milestone 1: stand up the PARA wireless trainer link and stream
     // centered channels. The IMU pipeline (M2+) is layered on later.

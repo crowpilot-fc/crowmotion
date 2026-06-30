@@ -2,38 +2,18 @@
 // Copyright 2026 Nitin Kumar
 //
 // FreeLook - DIY wireless FPV head tracker
-// Axis-to-channel mapping (Milestone 5).
+// Axis-to-channel mapping (Milestone 5). Reads gain/limits/channels/invert and
+// deadband from the live config; keeps only the recenter reference as state.
 
 #include "mapping.h"
 
 #include <math.h>
 
+#include "config.h"
 #include "para_ble.h"
-
-// Axis order: 0 = pan (yaw), 1 = tilt (pitch), 2 = roll.
-typedef struct {
-    uint8_t ch;     // output PARA channel index
-    float gain;     // microseconds per degree
-    int invert;     // -1 to invert, +1 otherwise
-} axis_cfg_t;
-
-// Defaults: pan -> ch0, tilt -> ch1, roll -> ch2. 8 us/deg gives full
-// deflection at about +/-64 degrees. Tune per taste (and per mounting).
-static axis_cfg_t s_cfg[3] = {
-    {0, 8.0f, +1},
-    {1, 8.0f, +1},
-    {2, 8.0f, +1},
-};
 
 static float s_ref[3];        // reference (center) yaw, pitch, roll
 static int s_have_ref = 0;
-
-void mapping_set_gain(float pan, float tilt, float roll)
-{
-    s_cfg[0].gain = pan;
-    s_cfg[1].gain = tilt;
-    s_cfg[2].gain = roll;
-}
 
 void mapping_recenter(float yaw_deg, float pitch_deg, float roll_deg)
 {
@@ -57,13 +37,39 @@ void mapping_update(float yaw_deg, float pitch_deg, float roll_deg)
         mapping_recenter(yaw_deg, pitch_deg, roll_deg);
     }
 
-    // v1 outputs two axes: pan (yaw) and tilt (pitch). Roll is not mapped.
-    float ang[3] = {yaw_deg, pitch_deg, roll_deg};
+    const freelook_config_t *c = config_get();
+    float ang[2] = {yaw_deg, pitch_deg};  // 0 = pan, 1 = tilt
+
+    struct {
+        uint8_t ch, en;
+        float gain;
+        int8_t inv;
+        uint16_t center, mn, mx;
+    } ax[2] = {
+        {c->pan_ch, c->pan_enabled, c->pan_gain, c->pan_invert,
+         c->pan_center, c->pan_min, c->pan_max},
+        {c->tilt_ch, c->tilt_enabled, c->tilt_gain, c->tilt_invert,
+         c->tilt_center, c->tilt_min, c->tilt_max},
+    };
+
     for (int i = 0; i < 2; i++) {
+        if (!ax[i].en) {
+            continue;
+        }
         float rel = wrap180(ang[i] - s_ref[i]);
-        float us = (float)FREELOOK_PARA_CH_CENTER + s_cfg[i].invert * s_cfg[i].gain * rel;
-        if (us < (float)FREELOOK_PARA_CH_MIN) us = FREELOOK_PARA_CH_MIN;
-        if (us > (float)FREELOOK_PARA_CH_MAX) us = FREELOOK_PARA_CH_MAX;
-        para_ble_set_channel(s_cfg[i].ch, (uint16_t)lroundf(us));
+
+        // Dead zone around center, shifted so there is no jump at the edge.
+        if (rel > c->deadband_deg) {
+            rel -= c->deadband_deg;
+        } else if (rel < -c->deadband_deg) {
+            rel += c->deadband_deg;
+        } else {
+            rel = 0.0f;
+        }
+
+        float us = (float)ax[i].center + ax[i].inv * ax[i].gain * rel;
+        if (us < ax[i].mn) us = ax[i].mn;
+        if (us > ax[i].mx) us = ax[i].mx;
+        para_ble_set_channel(ax[i].ch, (uint16_t)lroundf(us));
     }
 }
