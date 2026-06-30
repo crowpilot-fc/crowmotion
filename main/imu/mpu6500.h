@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // MPU6500 6-axis IMU driver (I2C).
 //
 // Original implementation from the InvenSense MPU-6500 register map / datasheet.

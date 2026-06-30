@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // FrSky PARA Bluetooth wireless trainer link (Milestone 1).
 //
 // Original implementation on ESP-IDF + NimBLE. The PARA link is a wire
@@ -52,7 +52,7 @@ static const char *TAG = "para";
 #define PARA_TX_PERIOD_MS 20
 #define PARA_CONNECT_SETTLE_MS 1000
 
-#define PARA_DEVICE_NAME "FreeLook"
+#define PARA_DEVICE_NAME "CrowMotion"
 
 // --- BLE service / characteristic UUIDs (16-bit FrSky PARA) ---
 #define PARA_SVC_UUID 0xFFF0
@@ -60,7 +60,7 @@ static const char *TAG = "para";
 #define PARA_CHR_FFF6_UUID 0xFFF6
 
 // Current channel values, centered until the IMU pipeline drives them.
-static uint16_t s_channels[FREELOOK_PARA_NUM_CHANNELS];
+static uint16_t s_channels[CROWMOTION_PARA_NUM_CHANNELS];
 
 // BLE state.
 static uint8_t s_own_addr_type;
@@ -76,27 +76,27 @@ static void para_advertise(void);
 
 static void channels_init_centered(void)
 {
-    for (int i = 0; i < FREELOOK_PARA_NUM_CHANNELS; i++) {
-        s_channels[i] = FREELOOK_PARA_CH_CENTER;
+    for (int i = 0; i < CROWMOTION_PARA_NUM_CHANNELS; i++) {
+        s_channels[i] = CROWMOTION_PARA_CH_CENTER;
     }
 }
 
 void para_ble_set_channel(uint8_t ch, uint16_t value_us)
 {
-    if (ch >= FREELOOK_PARA_NUM_CHANNELS) {
+    if (ch >= CROWMOTION_PARA_NUM_CHANNELS) {
         return;
     }
-    if (value_us < FREELOOK_PARA_CH_MIN) {
-        value_us = FREELOOK_PARA_CH_MIN;
-    } else if (value_us > FREELOOK_PARA_CH_MAX) {
-        value_us = FREELOOK_PARA_CH_MAX;
+    if (value_us < CROWMOTION_PARA_CH_MIN) {
+        value_us = CROWMOTION_PARA_CH_MIN;
+    } else if (value_us > CROWMOTION_PARA_CH_MAX) {
+        value_us = CROWMOTION_PARA_CH_MAX;
     }
     s_channels[ch] = value_us;
 }
 
 uint16_t para_ble_get_channel(uint8_t ch)
 {
-    return (ch < FREELOOK_PARA_NUM_CHANNELS) ? s_channels[ch] : 0;
+    return (ch < CROWMOTION_PARA_NUM_CHANNELS) ? s_channels[ch] : 0;
 }
 
 // --- PARA frame encoding -----------------------------------------------------
@@ -124,7 +124,7 @@ static uint8_t para_encode_frame(uint8_t *buf)
     buf[idx++] = PARA_START_STOP;
     para_push(buf, &idx, &crc, PARA_FRAME_TYPE);
 
-    for (int ch = 0; ch < FREELOOK_PARA_NUM_CHANNELS; ch += 2) {
+    for (int ch = 0; ch < CROWMOTION_PARA_NUM_CHANNELS; ch += 2) {
         uint16_t v1 = s_channels[ch];
         uint16_t v2 = s_channels[ch + 1];
         para_push(buf, &idx, &crc, v1 & 0x00FF);
@@ -273,7 +273,7 @@ static void para_advertise(void)
     // Advertising packet: flags + the FrSky service UUIDs (0xFFF0, 0xFFFA).
     // The name goes in the scan response, not here: FrSky's trainer scan reads
     // the display name from the scan response, so without it the radio shows
-    // the device's address instead of "FreeLook".
+    // the device's address instead of "CrowMotion".
     struct ble_hs_adv_fields adv = {0};
     adv.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     ble_uuid16_t uuids[] = {
@@ -386,6 +386,6 @@ int para_ble_start(void)
     }
 
     ESP_LOGI(TAG, "PARA link up: %d channels at %d us, advertising as \"%s\"",
-             FREELOOK_PARA_NUM_CHANNELS, FREELOOK_PARA_CH_CENTER, PARA_DEVICE_NAME);
+             CROWMOTION_PARA_NUM_CHANNELS, CROWMOTION_PARA_CH_CENTER, PARA_DEVICE_NAME);
     return 0;
 }

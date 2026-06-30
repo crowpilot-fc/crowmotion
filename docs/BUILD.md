@@ -1,13 +1,13 @@
-# Building and flashing FreeLook (macOS)
+# Building and flashing CrowMotion (macOS)
 
-FreeLook targets the ESP32-C3 and is built with Espressif ESP-IDF and the
+CrowMotion targets the ESP32-C3 and is built with Espressif ESP-IDF and the
 NimBLE Bluetooth host. The reference board is the ESP32-C3 Super Mini; the
 Seeed Studio XIAO ESP32-C3 also works unchanged (same chip, same GPIO numbers).
 This guide covers a macOS dev machine.
 
 ## 1. Install ESP-IDF
 
-Use a stable ESP-IDF release (v5.5.x is known good for FreeLook). The
+Use a stable ESP-IDF release (v5.5.x is known good for CrowMotion). The
 recommended install path:
 
 ```
@@ -54,7 +54,7 @@ as further targets; the PARA, IMU, and fusion code is shared across all of them.
 
 Board selection: the C3 Super Mini and the XIAO ESP32-C3 are both `esp32c3` but
 have different one-side I2C pins, so pick the board in `idf.py menuconfig` under
-"FreeLook Configuration -> Target board" (default: ESP32-C3 Super Mini). Changing
+"CrowMotion Configuration -> Target board" (default: ESP32-C3 Super Mini). Changing
 the board needs a rebuild.
 
 ## 4. Flash and monitor
@@ -79,15 +79,15 @@ while plugging in (or while pressing RESET), then run flash again.
 
 ## 5. What you should see
 
-On boot the monitor prints the FreeLook banner, brings up NimBLE, and advertises
-as "FreeLook" (PARA service 0xFFF0), streaming 8 centered trainer channels. If
+On boot the monitor prints the CrowMotion banner, brings up NimBLE, and advertises
+as "CrowMotion" (PARA service 0xFFF0), streaming 8 centered trainer channels. If
 the MPU6500 is wired, it is detected and the fusion task logs yaw/pitch/roll;
 if not, it logs a wiring hint and keeps the PARA link running. Connect the FrSky
 X20S as a wireless trainer to receive the channels.
 
 ```
-para: Advertising as "FreeLook" (service 0xFFF0)
-para: PARA link up: 8 channels at 1500 us, advertising as "FreeLook"
+para: Advertising as "CrowMotion" (service 0xFFF0)
+para: PARA link up: 8 channels at 1500 us, advertising as "CrowMotion"
 mpu6500: MPU6500 detected (WHO_AM_I = 0x70)
 fusion: yaw    0.0  pitch   -0.2  roll    0.1
 ```

@@ -1,4 +1,4 @@
-# FreeLook default build configuration for the Seeed XIAO ESP32-C3.
+# CrowMotion default build configuration for the Seeed XIAO ESP32-C3.
 # These seed sdkconfig on first build. Override locally with `idf.py menuconfig`;
 # do not commit the generated sdkconfig (it is gitignored).
 
@@ -13,7 +13,7 @@ CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
 CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
 
 # Advertised device name (the radio sees this as the trainer source).
-CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="FreeLook"
+CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="CrowMotion"
 
 # --- Flash size (4MB on the C3 Super Mini / XIAO; needed for OTA partitions) ---
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y

@@ -1,17 +1,17 @@
-menu "FreeLook Configuration"
+menu "CrowMotion Configuration"
 
-choice FREELOOK_BOARD
+choice CROWMOTION_BOARD
     prompt "Target board"
-    default FREELOOK_BOARD_C3_SUPERMINI
+    default CROWMOTION_BOARD_C3_SUPERMINI
     help
-        Selects the FreeLook hardware variant. This sets the IMU I2C pins so all
+        Selects the CrowMotion hardware variant. This sets the IMU I2C pins so all
         wiring stays on one side of the chosen board. Changing the board needs a
         rebuild.
 
-    config FREELOOK_BOARD_C3_SUPERMINI
+    config CROWMOTION_BOARD_C3_SUPERMINI
         bool "ESP32-C3 Super Mini (v1)"
 
-    config FREELOOK_BOARD_XIAO_C3
+    config CROWMOTION_BOARD_XIAO_C3
         bool "Seeed XIAO ESP32-C3 (v1)"
 endchoice
 

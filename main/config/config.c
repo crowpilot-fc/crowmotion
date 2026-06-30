@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Persistent configuration (NVS-backed).
 
 #include "config.h"
@@ -17,13 +17,13 @@
 
 static const char *TAG = "config";
 
-#define CFG_NVS_NAMESPACE "freelook"
+#define CFG_NVS_NAMESPACE "crowmotion"
 #define CFG_NVS_KEY "cfg"
 #define CFG_VERSION 2   // bump when the struct layout changes incompatibly
 
-static freelook_config_t s_cfg;
+static crowmotion_config_t s_cfg;
 
-void config_set_defaults(freelook_config_t *c)
+void config_set_defaults(crowmotion_config_t *c)
 {
     memset(c, 0, sizeof(*c));
     c->pan_ch = 0;          // TR1 (radio mixes this onto an output channel)
@@ -45,7 +45,7 @@ void config_set_defaults(freelook_config_t *c)
     c->remap[1] = 3;        //               canonical y <- +imu z
     c->remap[2] = 1;        //               canonical z <- +imu x
     c->tap_intensity = 20.0f;
-    strncpy(c->name, "FreeLook", sizeof(c->name) - 1);
+    strncpy(c->name, "CrowMotion", sizeof(c->name) - 1);
 }
 
 void config_init(void)
@@ -60,7 +60,7 @@ void config_init(void)
 
     uint8_t ver = 0;
     nvs_get_u8(h, "ver", &ver);
-    freelook_config_t loaded;
+    crowmotion_config_t loaded;
     size_t len = sizeof(loaded);
     esp_err_t err = nvs_get_blob(h, CFG_NVS_KEY, &loaded, &len);
     nvs_close(h);
@@ -73,14 +73,14 @@ void config_init(void)
     }
 }
 
-freelook_config_t *config_get(void)
+crowmotion_config_t *config_get(void)
 {
     return &s_cfg;
 }
 
 char *config_to_json(void)
 {
-    freelook_config_t *c = &s_cfg;
+    crowmotion_config_t *c = &s_cfg;
     cJSON *j = cJSON_CreateObject();
     cJSON_AddNumberToObject(j, "pan_ch", c->pan_ch);
     cJSON_AddNumberToObject(j, "tilt_ch", c->tilt_ch);
@@ -102,7 +102,7 @@ char *config_to_json(void)
     cJSON_AddNumberToObject(j, "tap", c->tap_intensity);
     cJSON_AddStringToObject(j, "name", c->name);
     cJSON_AddStringToObject(j, "wifi_ssid", c->wifi_ssid);  // password not exposed
-    cJSON_AddStringToObject(j, "version", FREELOOK_VERSION);
+    cJSON_AddStringToObject(j, "version", CROWMOTION_VERSION);
     char *out = cJSON_PrintUnformatted(j);
     cJSON_Delete(j);
     return out;
@@ -119,7 +119,7 @@ esp_err_t config_apply_json(const char *json)
         cJSON_Delete(j);
         return ESP_OK;
     }
-    freelook_config_t *c = &s_cfg;
+    crowmotion_config_t *c = &s_cfg;
     cJSON *it;
 #define GET_NUM(key, field)                                              \
     if ((it = cJSON_GetObjectItem(j, key)) && cJSON_IsNumber(it)) {       \

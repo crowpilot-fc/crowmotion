@@ -1,4 +1,4 @@
-// FreeLook v1 enclosure
+// CrowMotion v1 enclosure
 // In-line two-piece slide box for the ESP32-C3 Super Mini + MPU6500.
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar

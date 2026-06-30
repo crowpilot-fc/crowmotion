@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Application entry point.
 //
 // Original implementation. Inspired by RC HeadTracker (dlktdr) and
@@ -27,7 +27,7 @@
 #include "madgwick.h"
 #include "mapping.h"
 
-static const char *TAG = "freelook";
+static const char *TAG = "crowmotion";
 
 // --- Shared tracker state (read by the config web server) ---
 static tracker_snapshot_t s_snap;
@@ -211,7 +211,7 @@ static void fusion_task(void *arg)
             }
 
             // Publish a snapshot for the config UI.
-            const freelook_config_t *cc = config_get();
+            const crowmotion_config_t *cc = config_get();
             s_snap.yaw = yaw;
             s_snap.pitch = pitch;
             s_snap.roll = roll;
@@ -229,7 +229,7 @@ static void fusion_task(void *arg)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "FreeLook starting (%s)", FREELOOK_BOARD_NAME);
+    ESP_LOGI(TAG, "CrowMotion starting (%s)", CROWMOTION_BOARD_NAME);
 
     led_init();  // status LED: starts in "searching" (slow heartbeat)
 
@@ -264,5 +264,5 @@ void app_main(void)
                       "above), AD0=GND, VCC=3V3, then reset.");
     }
 
-    ESP_LOGI(TAG, "FreeLook up. Waiting for radio (X20S) to connect.");
+    ESP_LOGI(TAG, "CrowMotion up. Waiting for radio (X20S) to connect.");
 }

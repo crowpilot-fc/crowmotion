@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Persistent configuration model (saved in NVS).
 //
 // Holds everything the config UI can change. Runtime state (the recenter
@@ -49,19 +49,19 @@ typedef struct {
     // --- Home WiFi (station) for internet / server OTA ---
     char wifi_ssid[33];
     char wifi_pass[65];
-} freelook_config_t;
+} crowmotion_config_t;
 
 // Load config from NVS, or apply defaults if absent/invalid. Call once at boot.
 void config_init(void);
 
 // The live, in-RAM config. Edit via this pointer, then call config_save().
-freelook_config_t *config_get(void);
+crowmotion_config_t *config_get(void);
 
 // Persist the current config to NVS.
 esp_err_t config_save(void);
 
 // Fill a config with factory defaults (does not save).
-void config_set_defaults(freelook_config_t *c);
+void config_set_defaults(crowmotion_config_t *c);
 
 // Serialize the live config to a malloc'd JSON string (caller frees with free()).
 char *config_to_json(void);

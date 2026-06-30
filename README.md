@@ -1,4 +1,4 @@
-# FreeLook
+# CrowMotion
 
 A wireless FPV head tracker you can build for about **$5**.
 
@@ -6,7 +6,7 @@ A wireless FPV head tracker you can build for about **$5**.
 ![Status](https://img.shields.io/badge/status-alpha-orange)
 ![Board](https://img.shields.io/badge/board-ESP32--C3-green)
 
-Turn your head and the FPV camera follows. FreeLook reads your head motion and
+Turn your head and the FPV camera follows. CrowMotion reads your head motion and
 streams it to your RC radio over Bluetooth as trainer channels, so a pan/tilt
 camera on your aircraft mirrors where you look. Two cheap parts, a 3D printed
 case, and a USB power bank.
@@ -19,7 +19,7 @@ case, and a USB power bank.
 ## Why
 
 Commercial head trackers and IMU-equipped dev boards (XIAO nRF52840 Sense,
-Arduino Nano 33 BLE Sense) cost many times more. FreeLook does the same job with
+Arduino Nano 33 BLE Sense) cost many times more. CrowMotion does the same job with
 a $2 microcontroller and a $2 IMU. No proprietary dongle, no soldering iron
 required beyond four wires.
 
@@ -28,18 +28,18 @@ required beyond four wires.
 ```
    your head                 your radio                 your aircraft
   +-----------+   Bluetooth  +-----------+   RC link    +--------------+
-  | FreeLook  | -----------> | FrSky     | -----------> | RX -> 2x     |
+  | CrowMotion  | -----------> | FrSky     | -----------> | RX -> 2x     |
   | (tracker) |   PARA       | radio     |   channels   | servos -> cam|
   +-----------+   trainer    +-----------+              +--------------+
 ```
 
-1. **FreeLook** sits on your goggles and measures head pan, tilt, and roll.
+1. **CrowMotion** sits on your goggles and measures head pan, tilt, and roll.
 2. It sends those as **trainer channels** to your radio over the FrSky PARA
    Bluetooth wireless trainer link.
 3. Your radio forwards them to the aircraft like any other channels.
 4. On the aircraft, **two servos** pan and tilt the FPV camera to match.
 
-FreeLook is the head-tracking part (step 1). You bring the radio, and you print
+CrowMotion is the head-tracking part (step 1). You bring the radio, and you print
 the servo camera mount (step 4) from an existing design, see below.
 
 ## Bill of materials
@@ -64,7 +64,7 @@ To complete the camera side on your aircraft:
 
 ## The pan/tilt camera mount (not included)
 
-FreeLook does not ship a camera gimbal design, there are already dozens of great
+CrowMotion does not ship a camera gimbal design, there are already dozens of great
 2-servo pan/tilt mounts for FPV cameras. Pick one that fits your camera and SG90
 servos:
 
@@ -106,7 +106,7 @@ Developed against an **FrSky X20S (Tandem) on EthOS**.
 
 You need Espressif ESP-IDF (v5.5.x). Full setup, build, and flash steps for
 macOS are in
-[docs/BUILD.md](https://github.com/pa-ra-kram/FreeLook/blob/main/docs/BUILD.md).
+[docs/BUILD.md](https://github.com/crowpilot-fc/crowmotion/blob/main/docs/BUILD.md).
 Short version once ESP-IDF is installed:
 
 ```
@@ -118,7 +118,7 @@ idf.py -p /dev/cu.usbmodemXXXX flash monitor
 ## Enclosure
 
 A parametric, support-free, two-piece slide case lives at
-[hardware/enclosure/freelook_case.scad](https://github.com/pa-ra-kram/FreeLook/blob/main/hardware/enclosure/freelook_case.scad).
+[hardware/enclosure/crowmotion_case.scad](https://github.com/crowpilot-fc/crowmotion/blob/main/hardware/enclosure/crowmotion_case.scad).
 Open it in OpenSCAD, render the `coupon` to dial in the slide fit, then the
 `plate` for all parts. It clips onto a goggles strap.
 
@@ -140,9 +140,9 @@ wake-on-motion) is planned after v1 is solid.
 
 ## Credits and lineage
 
-FreeLook is an original implementation, inspired by these excellent projects. No
+CrowMotion is an original implementation, inspired by these excellent projects. No
 source code from them is used. See
-[NOTICE](https://github.com/pa-ra-kram/FreeLook/blob/main/NOTICE).
+[NOTICE](https://github.com/crowpilot-fc/crowmotion/blob/main/NOTICE).
 
 - [RC HeadTracker](https://github.com/dlktdr/HeadTracker) by Cliff Blackburn
   (dlktdr), GPL-3.0. Conceptual reference for the PARA protocol.
@@ -152,4 +152,4 @@ source code from them is used. See
 ## License
 
 Apache License 2.0. See
-[LICENSE](https://github.com/pa-ra-kram/FreeLook/blob/main/LICENSE).
+[LICENSE](https://github.com/crowpilot-fc/crowmotion/blob/main/LICENSE).

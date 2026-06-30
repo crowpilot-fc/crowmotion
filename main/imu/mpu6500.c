@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // MPU6500 6-axis IMU driver (I2C), Milestone 2.
 //
 // Original implementation from the InvenSense MPU-6500 register map. Uses the
@@ -22,8 +22,8 @@ static const char *TAG = "mpu6500";
 // I2C pins come from the per-board profile (board.h), chosen so all wiring
 // stays on one side of the selected board, next to its 3V3/GND pads.
 #define MPU_I2C_PORT I2C_NUM_0
-#define MPU_PIN_SDA FREELOOK_I2C_SDA_GPIO
-#define MPU_PIN_SCL FREELOOK_I2C_SCL_GPIO
+#define MPU_PIN_SDA CROWMOTION_I2C_SDA_GPIO
+#define MPU_PIN_SCL CROWMOTION_I2C_SCL_GPIO
 #define MPU_I2C_HZ 100000   // 100 kHz, tolerant of weak / internal-only pull-ups
 #define MPU_ADDR 0x68   // AD0 = GND
 #define MPU_IO_TIMEOUT_MS 100

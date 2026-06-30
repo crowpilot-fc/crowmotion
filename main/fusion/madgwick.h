@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Madgwick 6DOF (IMU-only) orientation filter.
 //
 // Original implementation of Sebastian Madgwick's published gradient-descent

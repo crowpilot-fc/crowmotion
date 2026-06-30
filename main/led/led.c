@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Onboard status LED driver. A single task renders the current pattern from a
 // phase counter, so status changes and the confirmation flash are responsive.
 

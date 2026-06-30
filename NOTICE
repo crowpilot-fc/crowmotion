@@ -1,11 +1,11 @@
-FreeLook
+CrowMotion
 Copyright 2026 Nitin Kumar
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-FreeLook is an original, from-scratch implementation. It was inspired by, and
+CrowMotion is an original, from-scratch implementation. It was inspired by, and
 its design draws ideas from, the following open-source head tracker projects.
-No source code from these projects is copied into FreeLook. They are credited
+No source code from these projects is copied into CrowMotion. They are credited
 here in gratitude and for transparency about lineage.
 
   RC HeadTracker by Cliff Blackburn (dlktdr)

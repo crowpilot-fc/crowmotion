@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Onboard status LED (single blue LED on GPIO8, active-low, also a strap pin).
 // Driven only after boot, so the boot-time strapping level is unaffected.
 

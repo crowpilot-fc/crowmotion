@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Axis-to-channel mapping (Milestone 5).
 //
 // Turns fused yaw/pitch/roll into PARA trainer channel values, with a per-axis

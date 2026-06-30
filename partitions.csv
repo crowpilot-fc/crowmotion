@@ -1,4 +1,4 @@
-# FreeLook partition table for the ESP32-C3 (4MB flash), OTA-capable.
+# CrowMotion partition table for the ESP32-C3 (4MB flash), OTA-capable.
 # Two app slots (ota_0/ota_1) plus otadata so firmware can self-update; nvs
 # holds settings. The app (~1.15MB) fits in each 1.5MB slot.
 # Name,     Type, SubType,  Offset,   Size

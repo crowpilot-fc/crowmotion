@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Config web UI: WiFi AP + HTTP server + live WebSocket, with a mode-control
 // task that swaps between the radio link (BLE) and config mode (WiFi).
 
@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"
 #include "esp_event.h"
@@ -32,6 +33,9 @@
 #include "led.h"
 
 static const char *TAG = "webcfg";
+
+// Default WPA2 passphrase for the config hotspot (>= 8 chars required).
+#define CROWMOTION_AP_PASSWORD "crowmotion"
 
 // Embedded single-page app (web/index.html).
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
@@ -146,7 +150,7 @@ static void ota_check_task(void *arg)
     char body[512];
     int n = -1;
     esp_http_client_config_t hc = {
-        .url = FREELOOK_UPDATE_URL,
+        .url = CROWMOTION_UPDATE_URL,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .timeout_ms = 8000,
     };
@@ -170,8 +174,8 @@ static void ota_check_task(void *arg)
         if (j) cJSON_Delete(j);
         vTaskDelete(NULL);
     }
-    if (strcmp(ver->valuestring, FREELOOK_VERSION) == 0) {
-        snprintf(s_ota_status, sizeof(s_ota_status), "up to date (%s)", FREELOOK_VERSION);
+    if (strcmp(ver->valuestring, CROWMOTION_VERSION) == 0) {
+        snprintf(s_ota_status, sizeof(s_ota_status), "up to date (%s)", CROWMOTION_VERSION);
         cJSON_Delete(j);
         vTaskDelete(NULL);
     }
@@ -308,7 +312,7 @@ static void httpd_start_all(void)
 
 static void wifi_ap_start(void)
 {
-    freelook_config_t *cf = config_get();
+    crowmotion_config_t *cf = config_get();
     bool use_sta = cf->wifi_ssid[0] != '\0';
 
     s_ap_netif = esp_netif_create_default_wifi_ap();
@@ -318,13 +322,18 @@ static void wifi_ap_start(void)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
+    // Per-device hotspot name: crowmotion-<last 4 hex of the AP MAC>.
+    uint8_t mac[6] = {0};
+    esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+
     wifi_config_t ap = {0};
-    int n = snprintf((char *)ap.ap.ssid, sizeof(ap.ap.ssid), "%s",
-                     (cf->name[0] ? cf->name : "FreeLook"));
+    int n = snprintf((char *)ap.ap.ssid, sizeof(ap.ap.ssid),
+                     "crowmotion-%02x%02x", mac[4], mac[5]);
     ap.ap.ssid_len = n;
+    strlcpy((char *)ap.ap.password, CROWMOTION_AP_PASSWORD, sizeof(ap.ap.password));
     ap.ap.channel = 1;
     ap.ap.max_connection = 4;
-    ap.ap.authmode = WIFI_AUTH_OPEN;
+    ap.ap.authmode = WIFI_AUTH_WPA2_PSK;
 
     if (use_sta) {
         wifi_config_t sta = {0};

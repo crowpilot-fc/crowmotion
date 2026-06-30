@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Axis-to-channel mapping (Milestone 5). Reads gain/limits/channels/invert and
 // deadband from the live config; keeps only the recenter reference as state.
 
@@ -37,7 +37,7 @@ void mapping_update(float yaw_deg, float pitch_deg, float roll_deg)
         mapping_recenter(yaw_deg, pitch_deg, roll_deg);
     }
 
-    const freelook_config_t *c = config_get();
+    const crowmotion_config_t *c = config_get();
     float ang[2] = {yaw_deg, pitch_deg};  // 0 = pan, 1 = tilt
 
     struct {

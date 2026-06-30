@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- FreeLook config UI. Served from the device; no external resources. -->
+<!-- CrowMotion config UI. Served from the device; no external resources. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>FreeLook Config</title>
+<title>CrowMotion Config</title>
 <style>
   :root { --bg:#11141a; --card:#1b1f29; --fg:#e7ebf3; --mut:#8a93a6; --acc:#5b8cff; --ok:#3ecf8e; }
   * { box-sizing:border-box; }
@@ -59,13 +59,18 @@
   .pill { background:#0e1117; border:1px solid #2a2f3b; border-radius:20px; padding:3px 10px;
           color:var(--mut); font-size:12px; }
   .mono { font-variant-numeric:tabular-nums; }
+  .otamsg { margin-top:10px; padding:9px 11px; border-radius:9px; font-size:13px;
+            background:#0e1117; border:1px solid #2a2f3b; color:var(--mut); }
+  .otamsg.info { border-color:#2a3a5a; color:#bcd0ff; }
+  .otamsg.ok { border-color:#22503a; color:#9fe6c4; background:#0f1a15; }
+  .otamsg.err { border-color:#5a2a2a; color:#ffb4b4; background:#1c1113; }
   #toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
            background:var(--ok); color:#04210f; padding:9px 16px; border-radius:20px;
            font-weight:600; opacity:0; transition:opacity .2s; }
 </style>
 </head>
 <body>
-<header>FreeLook <small id="status">connecting…</small></header>
+<header>CrowMotion <small id="status">connecting…</small></header>
 <div class="wrap">
 
   <div class="card">
@@ -135,14 +140,20 @@
   <div class="card">
     <h2>Firmware</h2>
     <div class="row"><label>Version</label><span class="pill mono" id="ver">—</span></div>
-    <div class="row"><label>Home WiFi (for updates)</label></div>
-    <input type="text" id="wifi_ssid" placeholder="SSID">
-    <input type="password" id="wifi_pass" placeholder="password (blank = keep current)" style="margin-top:8px">
-    <div class="btns" style="margin-top:10px">
+    <div class="btns">
       <button onclick="checkUpdate()">Check for updates</button>
       <button class="sec" onclick="document.getElementById('fw').click()">Update from file</button>
     </div>
-    <div class="row"><label>Status</label><span class="pill" id="otastat">idle</span></div>
+    <div id="otastat" class="otamsg">Updates download to the device over its own WiFi — your phone doesn't need internet.</div>
+    <div id="wifibox" style="display:none; margin-top:12px">
+      <div class="row"><label>WiFi for updates (2.4GHz only)</label></div>
+      <input type="text" id="wifi_ssid" placeholder="network name (SSID)">
+      <input type="password" id="wifi_pass" placeholder="password (blank = keep current)" style="margin-top:8px">
+      <div class="btns" style="margin-top:8px">
+        <button onclick="saveWifi()">Save WiFi &amp; check</button>
+        <button class="sec" onclick="hideWifi()">Cancel</button>
+      </div>
+    </div>
     <input type="file" id="fw" accept=".bin" style="display:none">
   </div>
 
@@ -238,17 +249,36 @@ function post(u,b){ return fetch(u,{method:"POST",body:b||""}); }
 async function save(){ fromUI(); await post("/config", JSON.stringify(cfg)); toast("Saved"); }
 async function autodetect(){ await post("/autodetect"); toast("Orientation captured"); }
 function doExport(){ fromUI(); const b=new Blob([JSON.stringify(cfg,null,2)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="freelook.json"; a.click(); }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="crowmotion.json"; a.click(); }
 function reset_(){ if(confirm("Reset all settings to defaults?")) post("/config",JSON.stringify({reset:1})).then(load); }
 let pollT;
+function setOta(msg,kind){ const e=$("otastat"); e.textContent=msg; e.className="otamsg"+(kind?(" "+kind):""); }
+function showWifiSetup(msg){ if(msg) setOta(msg,"info"); $("wifibox").style.display="block"; $("wifi_ssid").focus(); }
+function hideWifi(){ $("wifibox").style.display="none"; }
+function classifyStatus(s){
+  if(/check WiFi credentials|no internet/i.test(s))
+    return {t:`Couldn't join "${cfg.wifi_ssid}". Make sure it is a 2.4GHz network and the password is correct.`, k:"err", done:true, fix:true};
+  if(/could not reach|bad manifest/i.test(s))
+    return {t:"Connected to WiFi, but couldn't reach the update server. Try again later.", k:"err", done:true};
+  if(/up to date/i.test(s)) return {t:"You are on the latest version.", k:"ok", done:true};
+  if(/updated|rebooting/i.test(s)) return {t:"Updated — the device is rebooting.", k:"ok", done:true};
+  if(/failed/i.test(s)) return {t:"Update failed. Try again.", k:"err", done:true};
+  return {t:s, k:"info", done:false};
+}
 function pollStatus(){ clearInterval(pollT); pollT=setInterval(async()=>{
-  try{ const s=await(await fetch("/status")).text(); $("otastat").textContent=s;
-    if(/up to date|failed|no internet|reboot|bad manifest|could not/i.test(s)) clearInterval(pollT);
+  try{ const c=classifyStatus(await(await fetch("/status")).text()); setOta(c.t,c.k);
+    if(c.done){ clearInterval(pollT); if(c.fix) showWifiSetup(null); }
   }catch(_){ clearInterval(pollT); } },1500); }
-async function checkUpdate(){ await save(); await post("/checkupdate"); $("otastat").textContent="checking…"; pollStatus(); }
-$("fw").onchange = e => { const f=e.target.files[0]; if(!f)return; $("otastat").textContent="uploading…";
-  fetch("/update",{method:"POST",body:f}).then(r=>r.text()).then(t=>$("otastat").textContent=t)
-  .catch(()=>$("otastat").textContent="upload failed (device may be rebooting)"); };
+async function runCheck(){ await save(); await post("/checkupdate"); setOta("Checking for updates…","info"); pollStatus(); }
+function checkUpdate(){ fromUI();
+  if(!cfg.wifi_ssid){ showWifiSetup("Updates need a 2.4GHz WiFi with internet. Set one up below — your phone does not need internet, the device downloads the update itself."); return; }
+  runCheck(); }
+async function saveWifi(){ fromUI();
+  if(!$("wifi_ssid").value){ setOta("Enter your WiFi network name first.","err"); return; }
+  hideWifi(); runCheck(); }
+$("fw").onchange = e => { const f=e.target.files[0]; if(!f)return; setOta("Uploading firmware…","info");
+  fetch("/update",{method:"POST",body:f}).then(r=>r.text()).then(t=>setOta(t,/ok/i.test(t)?"ok":"err"))
+  .catch(()=>setOta("Upload finished — the device is rebooting.","ok")); };
 $("imp").onchange = e => { const f=e.target.files[0]; if(!f)return; const r=new FileReader();
   r.onload=()=>{ try{ cfg=JSON.parse(r.result); toUI(); toast("Imported (Save to apply)"); }catch(_){ toast("Bad file"); } }; r.readAsText(f); };
 

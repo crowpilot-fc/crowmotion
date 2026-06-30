@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Nitin Kumar
 //
-// FreeLook - DIY wireless FPV head tracker
+// CrowMotion - DIY wireless FPV head tracker
 // Config web UI controller: a WiFi access point serving a configuration page,
 // brought up on demand (quad-tap) and torn down to return to the radio link.
 // WiFi and the BLE radio link never carry traffic at the same time.
