@@ -3,18 +3,20 @@
 A wireless FPV head tracker you can build for about **$5**.
 
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
-![Status](https://img.shields.io/badge/status-alpha-orange)
+![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 ![Board](https://img.shields.io/badge/board-ESP32--C3-green)
 
 Turn your head and the FPV camera follows. CrowMotion reads your head motion and
 streams it to your RC radio over Bluetooth as trainer channels, so a pan/tilt
-camera on your aircraft mirrors where you look. Two cheap parts, a 3D printed
-case, and a USB power bank.
+camera on your aircraft mirrors where you look. Two cheap parts and a USB power
+bank (a printable case is coming later).
 
-> **Status: alpha.** The firmware (Bluetooth trainer link, IMU, sensor fusion,
-> and channel mapping) is implemented and builds. End-to-end verification on a
-> real radio is in progress, and it has not been flight-tested yet. Follow the
-> roadmap below.
+> **Work in progress.** This is an actively developed, unfinished project. The
+> firmware (Bluetooth trainer link, IMU, sensor fusion, channel mapping,
+> recenter, a WiFi config UI, and OTA updates) is implemented and builds, and
+> the link has been bench-verified against a real radio. It has not been
+> flight-tested yet, and a printable enclosure is not published yet. Expect
+> rough edges and follow the roadmap below.
 
 ## Why
 
@@ -50,7 +52,7 @@ The head tracker itself:
 |---|---|---|
 | ESP32-C3 Super Mini | microcontroller + Bluetooth | $2 - 3 |
 | MPU6500 module | 6-axis IMU (accel + gyro) | $2 |
-| 3D printed case | enclosure (in this repo) | filament |
+| 3D printed case | enclosure (coming later) | filament |
 | USB-C power | any power bank or USB port | reuse |
 | **Head tracker total** | | **~$5** |
 
@@ -115,12 +117,82 @@ idf.py build
 idf.py -p /dev/cu.usbmodemXXXX flash monitor
 ```
 
+## Using it
+
+Once flashed, CrowMotion runs on its own. Power it over USB, put it on your
+goggles, and connect your radio to it as a PARA wireless (Bluetooth) trainer.
+It advertises as "CrowMotion". The onboard LED and a couple of tap gestures are
+the whole physical interface, there are no buttons.
+
+### Onboard status LED
+
+The onboard LED (GPIO8) shows what the tracker is doing at a glance:
+
+| LED pattern | Meaning |
+|---|---|
+| Slow heartbeat (one short blink every ~2 s) | Advertising, waiting for the radio |
+| Solid on | Radio connected, streaming channels |
+| Double-blink, repeating | WiFi config hotspot is active |
+| Fast blink | Firmware update in progress |
+| N blinks, pause, repeat | Fault code (2 blinks = IMU not found, check wiring) |
+
+A short triple flash confirms an action, for example after a recenter.
+
+### Tap gestures
+
+Tap the tracker (or whatever it is mounted on) to control it, no app needed:
+
+- **Double-tap:** recenter. Your current head position becomes the new center.
+- **Quad-tap:** toggle the WiFi config hotspot. This only works when the radio
+  is not connected, so you cannot open config by accident mid-flight.
+
+CrowMotion also recenters itself automatically about half a second after boot,
+once the sensor fusion has settled.
+
+## Configuration (WiFi hotspot)
+
+Every setting is configured from a phone or laptop over a local WiFi hotspot,
+served by a self-contained web UI on the device. No app and no internet needed.
+
+1. With the radio disconnected, **quad-tap** the tracker. The LED starts its
+   double-blink pattern.
+2. Join the WiFi network **`crowmotion-XXXX`** (XXXX is the last four hex digits
+   of the device MAC). The password is **`crowmotion`**.
+3. Open **`http://192.168.4.1/`** in a browser.
+
+The web UI has these sections:
+
+- **Live:** real-time 3D head view, live pan/tilt channel values, and a
+  Recenter button.
+- **Orientation:** tell it how the tracker is mounted. Use the rotate/flip
+  buttons, or **Auto-detect**: hold the tracker in its worn position and it
+  works out the mounting from gravity.
+- **Channels:** assign pan and tilt to trainer channels TR1 to TR8, enable or
+  disable each, and invert direction.
+- **Response:** pan and tilt sensitivity (microseconds per degree), a deadband
+  around center, and the output range (min / center / max microseconds) per axis.
+- **Taps:** tap sensitivity for the double-tap and quad-tap gestures.
+- **Firmware:** current version, home WiFi credentials (for update downloads),
+  check for updates, and update from a local file.
+- **Device:** device name, plus export, import, and reset of the whole config.
+  "Exit hotspot" closes the hotspot and returns to the radio link.
+
+Settings persist across reboots (stored in NVS on the device).
+
+## Firmware updates (OTA)
+
+You can update the firmware without a cable, from the same web UI:
+
+- **From a file:** upload a `.bin` build straight from your phone or laptop.
+- **Over the internet:** enter your home WiFi credentials once, then
+  "Check for updates". The device connects out, compares against the published
+  version, and installs a newer build if one is available.
+
 ## Enclosure
 
-A parametric, support-free, two-piece slide case lives at
-[hardware/enclosure/crowmotion_case.scad](https://github.com/crowpilot-fc/crowmotion/blob/main/hardware/enclosure/crowmotion_case.scad).
-Open it in OpenSCAD, render the `coupon` to dial in the slide fit, then the
-`plate` for all parts. It clips onto a goggles strap.
+A printable case is in progress and will be added here later, as printable files
+(STL) plus the source. For now, mount the board and IMU however you like; any
+small project box or strap clip works while the design is finalized.
 
 ## Roadmap
 
@@ -129,11 +201,16 @@ This is the **v1** USB-powered build. Progress:
 - [x] Bluetooth PARA trainer link (advertise, connect, stream channels)
 - [x] MPU6500 IMU bring-up
 - [x] 6DOF Madgwick fusion
-- [x] Head-angle to channel mapping
-- [ ] On-radio end-to-end verification (in progress)
-- [ ] Continuous auto-calibration and mounting-orientation handling
-- [ ] Recenter (double-tap and command)
-- [ ] Settings persistence and a printed, mounted build
+- [x] Head-angle to channel mapping with per-axis sensitivity, deadband, range, and invert
+- [x] Continuous auto-calibration and mounting-orientation handling (with auto-detect)
+- [x] Recenter (double-tap and web UI button)
+- [x] Onboard status LED with state patterns and fault blink-codes
+- [x] Tap gestures (double-tap recenter, quad-tap config)
+- [x] Settings persistence (NVS) and a WiFi configuration UI
+- [x] Firmware updates (local upload and server check) over WiFi
+- [x] Bench verification against a real radio (FrSky X20S / EthOS)
+- [ ] Flight test and a printed, mounted build
+- [ ] Printable enclosure (STL + source)
 
 A battery-powered, fully standalone **v2** (onboard LiPo, deep sleep,
 wake-on-motion) is planned after v1 is solid.
