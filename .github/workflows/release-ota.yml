@@ -63,6 +63,10 @@ jobs:
           mkdir -p site/flash site/crowmotion
           cp flasher/index.html site/index.html
 
+          # CORS: let the flasher embedded on crowpilot.in fetch the
+          # manifest and images cross-origin (Cloudflare Pages _headers).
+          printf '/flash/*\n  Access-Control-Allow-Origin: *\n' > site/_headers
+
           # Complete flash images for the browser flasher (offset 0).
           esptool.py --chip esp32c3 merge_bin \
             -o site/flash/crowmotion-merged.bin \
