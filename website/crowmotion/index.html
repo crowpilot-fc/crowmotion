@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrowMotion - a $5 wireless FPV head tracker</title>
+<meta name="description" content="CrowMotion is an open-source wireless head tracker for FPV flying that you can build for about 5 dollars. Flash it straight from your browser.">
+<link rel="canonical" href="https://crowpilot.in/crowmotion/">
+<meta property="og:title" content="CrowMotion - a $5 wireless FPV head tracker">
+<meta property="og:description" content="Turn your head. The camera follows. Open source, two parts, four wires, flashable from your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://crowpilot.in/crowmotion/">
+<meta name="theme-color" content="#f5f5f7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='13'%20fill='none'%20stroke='%230b0b0c'%20stroke-width='3'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='4'%20fill='%23e5383b'/%3E%3C/svg%3E">
+<style>
+html { scroll-behavior: smooth; }
+body { margin: 0; background: #e9e9eb; color: #0b0b0c; font-family: -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+summary::-webkit-details-marker { display: none; }
+.hv1:hover{background:#ececef;color:#0b0b0c}
+.hv2:hover{background:#f4f4f6}
+.hv3:hover{background:#c62f33}
+.hv4:hover{background:#fafafa}
+.hv5:hover{color:#0b0b0c}
+</style>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</head>
+<body>
+<header style="position:sticky;top:0;z-index:50;background:rgba(245,245,247,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid #e7e7ea">
+  <div style="max-width:960px;margin:0 auto;padding:0 20px;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <a href="#top" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+      <span style="width:26px;height:26px;border-radius:50%;border:2.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block"></span>
+      </span>
+      <span style="font-family:'Futura','Avenir Next','Century Gothic',system-ui,sans-serif;font-size:18px;letter-spacing:.01em"><span style="font-weight:800;color:#0b0b0c">Crow</span><span style="font-weight:400;color:#3a3b3e">Motion</span></span>
+    </a>
+    <nav style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" aria-label="Main">
+      <a href="#features" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Features</a>
+      <a href="#flash" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Flash</a>
+      <a href="#build" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Build</a>
+      <a href="#configure" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Configure</a>
+      <a href="#faq" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">FAQ</a>
+      <a href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:9px 16px;border-radius:13px;margin-left:6px" class="hv2">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top" style="background:#f5f5f7">
+<div style="max-width:960px;margin:0 auto;padding:0 20px">
+
+  <!-- HERO -->
+  <section style="padding:72px 0 64px;display:flex;gap:48px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1 1 380px;min-width:300px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Open-source FPV head tracker</div>
+      <h1 style="margin:0;font-size:clamp(34px,5vw,50px);line-height:1.08;font-weight:800;letter-spacing:-.02em;color:#0b0b0c;text-wrap:balance">Turn your head. The camera follows.</h1>
+      <p style="margin:0;font-size:17px;line-height:1.6;color:#3a3b3e;max-width:52ch;text-wrap:pretty">CrowMotion is a wireless head tracker for FPV flying that you can build for about 5 dollars. Two parts, four wires, no soldering skills beyond the basics, and it pairs with your radio like a wireless trainer.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e;font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums">v0.1.1</span>
+        <span style="background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e">Apache-2.0</span>
+        <span style="background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e">ESP32-C3</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        <a href="#flash" style="text-decoration:none;background:#e5383b;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px" class="hv3">Flash it now</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px;box-sizing:border-box" class="hv2">View on GitHub</a>
+      </div>
+    </div>
+    <div style="flex:1 1 340px;min-width:280px">
+      <div role="img" aria-label="Photo placeholder: tracker mounted on FPV goggles, hero shot" style="aspect-ratio:4/3;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#9a9ca3;text-align:center">PHOTO: tracker mounted on FPV goggles, hero shot</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section style="padding:24px 0 64px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>How it works</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
+        <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">1</span>
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">Wear it</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">CrowMotion sits on your goggles and measures head pan and tilt with a 6-axis IMU, fused at 100 Hz.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
+        <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">2</span>
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">It talks to your radio</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Channels stream over the FrSky PARA Bluetooth trainer link, or over CrowLink to any radio with a trainer jack.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
+        <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">3</span>
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">The camera follows</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Your radio forwards the channels, and two servos on the aircraft pan and tilt the FPV camera to match your head.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" style="padding:24px 0 64px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Why CrowMotion</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-family:ui-monospace,Menlo,monospace;font-size:34px;font-weight:700;color:#e5383b;font-variant-numeric:tabular-nums;line-height:1">$5</div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">About 5 dollars</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">An ESP32-C3 Super Mini and an MPU6500 module. That is the whole tracker.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block;margin-top:6px"></span>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Truly wireless</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Bluetooth to the radio, tap gestures instead of buttons, and a plug-in battery option. Nothing tethers your head.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block;margin-top:6px"></span>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Self-calibrating</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Continuous gyro auto-calibration kills yaw drift while you fly. Double-tap the tracker to recenter at any time.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block;margin-top:6px"></span>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Configure from your phone</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Quad-tap opens a WiFi hotspot with a full web UI: live 3D head view, channels, response curves, and updates.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block;margin-top:6px"></span>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Updates over the air</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Check and install new firmware from the config UI, or reflash from the browser. No cables, no toolchain.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block;margin-top:6px"></span>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Open source</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Apache-2.0, built from scratch on ESP-IDF. Firmware, protocol, and hardware notes all public.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FLASH -->
+  <section id="flash" style="padding:24px 0 64px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Flash it</div>
+    <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:32px;display:flex;flex-direction:column;gap:20px">
+      <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">Flash from this browser</h2>
+      <p style="margin:0;font-size:15.5px;line-height:1.6;color:#3a3b3e;max-width:64ch;text-wrap:pretty">Plug your board into this computer over USB-C and click Connect. The right firmware is picked automatically: an ESP32-C3 gets CrowMotion, an ESP32-C6 gets CrowLink. Works in Chrome and Edge on desktop.</p>
+      <div>
+        <esp-web-install-button manifest="https://updates.crowpilot.in/flash/manifest.json">
+          <button slot="activate" style="background:#e5383b;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;padding:0 24px;border-radius:13px;border:none;cursor:pointer;font-family:inherit" class="hv3">Connect</button>
+          <span slot="unsupported" style="font-size:14px;color:#7c7e85">This browser cannot flash over USB. Use Chrome or Edge on a desktop computer.</span>
+        </esp-web-install-button>
+      </div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#7c7e85">Board not showing up? Use a data-capable USB-C cable, hold BOOT while plugging in, and close any serial monitors.</p>
+      <p style="margin:0;font-size:13.5px;color:#7c7e85">Or open the standalone flasher at <a href="https://updates.crowpilot.in" target="_blank" rel="noopener" style="color:#e5383b;font-weight:600">updates.crowpilot.in</a></p>
+    </div>
+  </section>
+
+  <!-- BUILD -->
+  <section id="build" style="padding:24px 0 64px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:28px">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:14px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Build it</div>
+      <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">Two parts, four wires, one afternoon.</h2>
+    </div>
+
+    <!-- BOM -->
+    <div>
+      <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">ESP32-C3 Super Mini</span><span style="font-size:12.5px;color:#7c7e85">microcontroller + Bluetooth</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$2-3</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">MPU6500 module</span><span style="font-size:12.5px;color:#7c7e85">6-axis IMU</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$2</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">3D printed case</span><span style="font-size:12.5px;color:#7c7e85">coming soon</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;white-space:nowrap">filament</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">USB-C power</span><span style="font-size:12.5px;color:#7c7e85">any power bank</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;white-space:nowrap">reuse</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;box-sizing:border-box;background:#fafafa">
+          <span style="font-size:14.5px;font-weight:700;color:#0b0b0c">Total</span>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:700;color:#e5383b;font-variant-numeric:tabular-nums;white-space:nowrap">~$5</span>
+        </div>
+      </div>
+      <p style="margin:10px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Headers, wires, filament, and shipping are extra. Cheapest wireless head tracker we know of - the nearest DIY alternative starts at a 16 dollar board.</p>
+    </div>
+
+    <!-- Wiring -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:stretch">
+      <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden;align-self:start">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">MPU6500 VCC</span><span style="color:#3a3b3e">3V3</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">MPU6500 GND</span><span style="color:#3a3b3e">GND</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">MPU6500 SDA</span><span style="color:#3a3b3e">GPIO4 (D2)</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">MPU6500 SCL</span><span style="color:#3a3b3e">GPIO3 (D1)</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">MPU6500 AD0</span><span style="color:#3a3b3e">GND</span></div>
+      </div>
+      <div role="img" aria-label="Photo placeholder: wiring closeup, four wires" style="aspect-ratio:1/1;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#9a9ca3;text-align:center">PHOTO: wiring closeup, four wires</span>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">1</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Wire it</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Five connections, all on one side of the board.</p>
+        <div role="img" aria-label="Photo placeholder: parts flat-lay" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: parts flat-lay</span>
+        </div>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">2</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Flash it</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Use the flasher above, straight from the browser.</p>
+        <div role="img" aria-label="Photo placeholder: board plugged into laptop" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: board plugged into laptop</span>
+        </div>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">3</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Mount it</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Flat against your goggles temple, USB-C to the rear. Any other position works too: run Auto-detect in the config UI.</p>
+        <div role="img" aria-label="Photo placeholder: tracker mounted at temple" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: tracker mounted at temple</span>
+        </div>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">4</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Pair your radio</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Add CrowMotion as a wireless trainer on your FrSky radio and map the trainer channels.</p>
+        <div role="img" aria-label="Photo placeholder: radio trainer screen" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: radio trainer screen</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video -->
+    <div role="img" aria-label="Video placeholder: build walkthrough, coming soon" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#9a9ca3;text-align:center">VIDEO: build walkthrough - coming soon</span>
+    </div>
+
+    <p style="margin:0;font-size:13.5px;color:#7c7e85">Building from source instead? See <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">docs/BUILD.md</span> in the repo.</p>
+  </section>
+
+  <!-- CONFIGURE -->
+  <section id="configure" style="padding:24px 0 64px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>No app needed</div>
+    <div style="display:flex;gap:40px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1 1 380px;min-width:300px;display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">Everything in the browser</h2>
+        <p style="margin:0;font-size:15.5px;line-height:1.65;color:#3a3b3e;text-wrap:pretty">Quad-tap the tracker and it opens its own WiFi hotspot. Join <span style="font-family:ui-monospace,Menlo,monospace;font-size:14px">crowmotion-XXXX</span>, open <span style="font-family:ui-monospace,Menlo,monospace;font-size:14px">192.168.4.1</span>, and everything is there: a live 3D view of your head, channel mapping, sensitivity and deadband, tap tuning, firmware updates, and backup of your settings. No app store, no account, no cloud.</p>
+      </div>
+      <div style="flex:0 1 240px;min-width:200px;margin:0 auto">
+        <div role="img" aria-label="Photo placeholder: config UI screenshot on a phone" style="aspect-ratio:9/19;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: config UI screenshot on a phone</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CROWLINK -->
+  <section style="padding:24px 0 64px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Any radio</div>
+    <div style="background:#0b0b0c;border-radius:18px;padding:36px;display:flex;flex-direction:column;gap:16px">
+      <span style="align-self:flex-start;border:1px solid rgba(229,56,59,.6);border-radius:999px;padding:5px 13px;font-size:12px;font-weight:600;color:#ff8a8c;font-family:ui-monospace,Menlo,monospace">in development</span>
+      <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#ffffff">No Bluetooth trainer? Meet CrowLink.</h2>
+      <p style="margin:0;font-size:15.5px;line-height:1.65;color:rgba(255,255,255,.72);max-width:66ch;text-wrap:pretty">CrowLink is a small battery-powered receiver that plugs into any radio's 3.5mm trainer jack. The tracker streams to it wirelessly over ESP-NOW and it outputs standard 8-channel PPM, which means CrowMotion works with essentially every radio ever made, not just FrSky. Firmware is ready; build guide coming soon.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" style="padding:24px 0 72px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Questions</div>
+    <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Which radios work?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">FrSky radios with the PARA wireless trainer (developed against an X20S on EthOS) connect directly over Bluetooth. Everything else can use CrowLink through the trainer jack.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Has it flown?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">The link is bench-verified against a real radio. Flight testing is in progress - this is an actively developed project, and the roadmap is public on GitHub.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Does it drift?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Yaw drifts slowly on any magnetometer-free tracker. Continuous auto-calibration removes most of it, and a double-tap recenters instantly.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Is my radio's trainer mode safe?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Yes, that is the best part: flip the trainer switch and your radio sticks take over instantly, exactly like an instructor override.</p>
+      </details>
+      <details>
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Where do I get help?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">GitHub Issues for bugs, GitHub Discussions for everything else.</p>
+      </details>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer style="background:#e9e9eb;border-top:1px solid #e7e7ea">
+  <div style="max-width:960px;margin:0 auto;padding:36px 20px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <span style="width:22px;height:22px;border-radius:50%;border:2px solid #0b0b0c;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none">
+        <span style="width:6px;height:6px;border-radius:50%;background:#e5383b;display:block"></span>
+      </span>
+      <nav style="display:flex;gap:20px;flex-wrap:wrap" aria-label="Footer">
+        <a href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">GitHub</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion/releases" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">Releases</a>
+        <a href="https://updates.crowpilot.in" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">Flasher</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion/discussions" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">Discussions</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion/blob/main/LICENSE" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">License (Apache-2.0)</a>
+      </nav>
+    </div>
+    <p style="margin:0;font-size:12.5px;color:#9a9ca3">CrowMotion is part of crowpilot.in</p>
+  </div>
+</footer>
+</body>
+</html>
