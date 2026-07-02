@@ -5,14 +5,11 @@ choice CROWMOTION_BOARD
     default CROWMOTION_BOARD_C3_SUPERMINI
     help
         Selects the CrowMotion hardware variant. This sets the IMU I2C pins so all
-        wiring stays on one side of the chosen board. Changing the board needs a
-        rebuild.
+        wiring stays on one side of the board. v1 supports exactly one board:
+        the ESP32-C3 Super Mini.
 
     config CROWMOTION_BOARD_C3_SUPERMINI
         bool "ESP32-C3 Super Mini (v1)"
-
-    config CROWMOTION_BOARD_XIAO_C3
-        bool "Seeed XIAO ESP32-C3 (v1)"
 endchoice
 
 endmenu

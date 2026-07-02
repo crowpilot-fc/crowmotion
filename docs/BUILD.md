@@ -1,8 +1,7 @@
 # Building and flashing CrowMotion (macOS)
 
 CrowMotion targets the ESP32-C3 and is built with Espressif ESP-IDF and the
-NimBLE Bluetooth host. The reference board is the ESP32-C3 Super Mini; the
-Seeed Studio XIAO ESP32-C3 also works unchanged (same chip, same GPIO numbers).
+NimBLE Bluetooth host. v1 supports exactly one board: the ESP32-C3 Super Mini.
 This guide covers a macOS dev machine.
 
 ## 1. Install ESP-IDF
@@ -48,14 +47,9 @@ idf.py build
 `set-target` is needed once (it generates sdkconfig from sdkconfig.defaults and
 the chip target). Re-run it only if you change targets.
 
-Targets: v1 builds for `esp32c3` (the C3 Super Mini / XIAO C3). The battery v2
-boards add `esp32s3` (Seeed XIAO ESP32-S3) and `esp32h2` (ESP32-H2 Super Mini)
-as further targets; the PARA, IMU, and fusion code is shared across all of them.
-
-Board selection: the C3 Super Mini and the XIAO ESP32-C3 are both `esp32c3` but
-have different one-side I2C pins, so pick the board in `idf.py menuconfig` under
-"CrowMotion Configuration -> Target board" (default: ESP32-C3 Super Mini). Changing
-the board needs a rebuild.
+Targets: v1 builds for `esp32c3` only, and the only supported board is the
+ESP32-C3 Super Mini (it is the default and sole option under "CrowMotion
+Configuration -> Target board" in menuconfig).
 
 ## 4. Flash and monitor
 

@@ -5,8 +5,8 @@
 // MPU6500 6-axis IMU driver (I2C).
 //
 // Original implementation from the InvenSense MPU-6500 register map / datasheet.
-// Wiring (ESP32-C3 Super Mini or XIAO ESP32-C3): SDA = GPIO10, SCL = GPIO20,
-// AD0 = GND (address 0x68), VCC = 3V3. On the XIAO these are pads D10 and D7.
+// Wiring (ESP32-C3 Super Mini): SDA = GPIO4 (D2), SCL = GPIO3 (D1),
+// AD0 = GND (address 0x68), VCC = 3V3. Pins come from board.h.
 
 #pragma once
 
