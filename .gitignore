@@ -19,3 +19,6 @@ dependencies.lock
 # Python (idf tooling helpers)
 __pycache__/
 *.pyc
+
+# Wrangler CLI cache
+.wrangler/
