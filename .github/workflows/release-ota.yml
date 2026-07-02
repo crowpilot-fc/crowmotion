@@ -1,0 +1,69 @@
+# Publish a firmware release to the OTA update server.
+#
+# Triggered ONLY when a GitHub release is published (not on pushes or tag
+# creation). Builds the tagged source, verifies the tag matches version.h,
+# attaches the built .bin to the release, and deploys the OTA manifest +
+# binary to Cloudflare Pages (updates.crowpilot.in).
+#
+# Each Pages deploy replaces the site, so only the newest binary lives on
+# the update host; all historical binaries remain on GitHub Releases.
+name: release-ota
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write # upload the built .bin to the release
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Verify tag matches version.h
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VER="${TAG#v}"
+          SRC=$(sed -n 's/#define CROWMOTION_VERSION "\(.*\)"/\1/p' main/version.h)
+          echo "release tag: $VER   version.h: $SRC"
+          if [ "$VER" != "$SRC" ]; then
+            echo "::error::version.h ($SRC) does not match the release tag ($VER). Bump version.h before releasing."
+            exit 1
+          fi
+
+      - name: Build with ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32c3
+
+      - name: Stage OTA site
+        run: |
+          VER="${{ github.event.release.tag_name }}"
+          VER="${VER#v}"
+          mkdir -p ota-site/crowmotion
+          sudo cp build/crowmotion.bin "ota-site/crowmotion/crowmotion-${VER}.bin"
+          sudo chown "$USER" "ota-site/crowmotion/crowmotion-${VER}.bin"
+          printf '{"version":"%s","url":"https://updates.crowpilot.in/crowmotion/crowmotion-%s.bin"}\n' \
+            "$VER" "$VER" > ota-site/crowmotion/latest.json
+          echo "manifest:" && cat ota-site/crowmotion/latest.json
+
+      - name: Attach binary to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="${{ github.event.release.tag_name }}"
+          VER="${VER#v}"
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "ota-site/crowmotion/crowmotion-${VER}.bin" --clobber
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 2fca98f9bd732794c53117b67c5b4593
+          command: pages deploy ota-site --project-name crowmotion-updates
