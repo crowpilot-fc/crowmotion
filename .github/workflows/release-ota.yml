@@ -120,4 +120,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: 2fca98f9bd732794c53117b67c5b4593
-          command: pages deploy site --project-name crowmotion-updates
+          # --branch main forces a production deployment; the release event
+          # checks out a detached tag, which wrangler would otherwise treat
+          # as a preview branch ("HEAD") and never update the live site.
+          command: pages deploy site --project-name crowmotion-updates --branch main
