@@ -86,7 +86,16 @@ static bool client_on_ap(httpd_req_t *req)
     if (sa.sin6_family == AF_INET) {
         peer = ((struct sockaddr_in *)&sa)->sin_addr.s_addr;
     } else if (sa.sin6_family == AF_INET6) {
-        peer = sa.sin6_addr.un.u32_addr[3];  // IPv4-mapped IPv6
+        // Accept only IPv4-mapped IPv6 (::ffff:a.b.c.d); a native IPv6 peer is
+        // not on the IPv4 AP subnet and must not pass by reading its low word.
+        const uint8_t *a = sa.sin6_addr.un.u8_addr;
+        for (int i = 0; i < 10; i++) {
+            if (a[i] != 0) return false;
+        }
+        if (a[10] != 0xff || a[11] != 0xff) {
+            return false;
+        }
+        peer = sa.sin6_addr.un.u32_addr[3];
     } else {
         return false;
     }
@@ -97,13 +106,44 @@ static bool client_on_ap(httpd_req_t *req)
     return (peer & ip.netmask.addr) == (ip.ip.addr & ip.netmask.addr);
 }
 
-// Returns true if the request may proceed; otherwise sends 403 and the
-// caller must return immediately.
+// CSRF guard: a browser attaches an Origin header to cross-site POSTs. If one
+// is present it must be our own AP origin; otherwise a page the victim's phone
+// loaded (while joined to the hotspot) could silently POST /config, /update,
+// or /recenter. Requests with no Origin (the config page's own fetches on some
+// browsers, curl) fall through to the AP-subnet gate as before.
+static bool origin_ok(httpd_req_t *req)
+{
+    size_t n = httpd_req_get_hdr_value_len(req, "Origin");
+    if (n == 0) {
+        return true;  // no Origin: not a cross-site browser request
+    }
+    char origin[48];
+    if (n >= sizeof(origin)) {
+        return false;
+    }
+    if (httpd_req_get_hdr_value_str(req, "Origin", origin, sizeof(origin)) != ESP_OK) {
+        return false;
+    }
+    return strcmp(origin, "http://192.168.4.1") == 0;
+}
+
+// Gate a GET handler on the hotspot subnet. Sends 403 and returns on failure.
 #define REQUIRE_AP_CLIENT(req)                                                \
     do {                                                                      \
         if (!client_on_ap(req)) {                                             \
             httpd_resp_send_err(req, HTTPD_403_FORBIDDEN,                     \
                                 "config is only served on the hotspot");     \
+            return ESP_FAIL;                                                  \
+        }                                                                     \
+    } while (0)
+
+// Gate a state-changing handler on the hotspot subnet AND a same-origin
+// request (CSRF defense). Sends 403 and returns on failure.
+#define REQUIRE_AP_WRITE(req)                                                 \
+    do {                                                                      \
+        if (!client_on_ap(req) || !origin_ok(req)) {                          \
+            httpd_resp_send_err(req, HTTPD_403_FORBIDDEN,                     \
+                                "request refused");                          \
             return ESP_FAIL;                                                  \
         }                                                                     \
     } while (0)
@@ -147,7 +187,7 @@ static esp_err_t read_body(httpd_req_t *req, char *buf, size_t buflen)
 
 static esp_err_t h_post_config(httpd_req_t *req)
 {
-    REQUIRE_AP_CLIENT(req);
+    REQUIRE_AP_WRITE(req);
     char buf[1024];
     if (read_body(req, buf, sizeof(buf)) != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "bad body");
@@ -161,7 +201,7 @@ static esp_err_t h_post_config(httpd_req_t *req)
 
 static esp_err_t h_post_recenter(httpd_req_t *req)
 {
-    REQUIRE_AP_CLIENT(req);
+    REQUIRE_AP_WRITE(req);
     tracker_request_recenter();
     httpd_resp_sendstr(req, "ok");
     return ESP_OK;
@@ -169,7 +209,7 @@ static esp_err_t h_post_recenter(httpd_req_t *req)
 
 static esp_err_t h_post_autodetect(httpd_req_t *req)
 {
-    REQUIRE_AP_CLIENT(req);
+    REQUIRE_AP_WRITE(req);
     tracker_request_autodetect();
     httpd_resp_sendstr(req, "ok");
     return ESP_OK;
@@ -177,13 +217,27 @@ static esp_err_t h_post_autodetect(httpd_req_t *req)
 
 static esp_err_t h_post_exit(httpd_req_t *req)
 {
-    REQUIRE_AP_CLIENT(req);
+    REQUIRE_AP_WRITE(req);
     httpd_resp_sendstr(req, "ok");
     webconfig_request_toggle();
     return ESP_OK;
 }
 
 // --- OTA ---------------------------------------------------------------------
+
+// Compare dotted "X.Y.Z" versions. Returns <0 if a<b, 0 if equal, >0 if a>b.
+// Missing/garbage components parse to 0, so a malformed server version can
+// never read as newer than a well-formed current version.
+static int version_cmp(const char *a, const char *b)
+{
+    int va[3] = {0, 0, 0}, vb[3] = {0, 0, 0};
+    sscanf(a, "%d.%d.%d", &va[0], &va[1], &va[2]);
+    sscanf(b, "%d.%d.%d", &vb[0], &vb[1], &vb[2]);
+    for (int i = 0; i < 3; i++) {
+        if (va[i] != vb[i]) return va[i] < vb[i] ? -1 : 1;
+    }
+    return 0;
+}
 
 // Pull update: join home WiFi, fetch the manifest, flash if a newer version.
 static void ota_check_task(void *arg)
@@ -224,7 +278,10 @@ static void ota_check_task(void *arg)
         if (j) cJSON_Delete(j);
         vTaskDelete(NULL);
     }
-    if (strcmp(ver->valuestring, CROWMOTION_VERSION) == 0) {
+    // Only move strictly forward. Refusing equal-or-older versions makes a
+    // compromised or spoofed manifest unable to force a downgrade to an older,
+    // potentially vulnerable build.
+    if (version_cmp(ver->valuestring, CROWMOTION_VERSION) <= 0) {
         snprintf(s_ota_status, sizeof(s_ota_status), "up to date (%s)", CROWMOTION_VERSION);
         cJSON_Delete(j);
         vTaskDelete(NULL);
@@ -255,7 +312,7 @@ static void ota_check_task(void *arg)
 
 static esp_err_t h_post_checkupdate(httpd_req_t *req)
 {
-    REQUIRE_AP_CLIENT(req);
+    REQUIRE_AP_WRITE(req);
     if (config_get()->wifi_ssid[0] == '\0') {
         httpd_resp_sendstr(req, "set home WiFi first");
         return ESP_OK;
@@ -276,7 +333,7 @@ static esp_err_t h_get_status(httpd_req_t *req)
 // Local update: the page POSTs a firmware .bin as the body; flash it.
 static esp_err_t h_post_update(httpd_req_t *req)
 {
-    REQUIRE_AP_CLIENT(req);
+    REQUIRE_AP_WRITE(req);
     const esp_partition_t *part = esp_ota_get_next_update_partition(NULL);
     esp_ota_handle_t ota;
     if (!part || esp_ota_begin(part, OTA_SIZE_UNKNOWN, &ota) != ESP_OK) {

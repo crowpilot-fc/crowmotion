@@ -1,0 +1,9 @@
+# Keep the SHA-pinned GitHub Actions current via automated PRs. Dependabot
+# updates the SHA and the trailing version comment together, so pinning does
+# not mean the actions silently rot.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

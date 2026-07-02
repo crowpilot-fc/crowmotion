@@ -25,14 +25,25 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # The release tag is attacker-influenceable text; never interpolate it
+    # into a run: script directly (that is a shell-injection vector). Bind it
+    # to an env var, validate the format once, and reference "$TAG" quoted.
+    env:
+      TAG: ${{ github.event.release.tag_name }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Validate release tag
+        run: |
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) : ;;
+            *) echo "::error::release tag '$TAG' is not vMAJOR.MINOR.PATCH"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
           ref: ${{ github.event.release.tag_name }}
 
       - name: Verify tag matches version.h
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           VER="${TAG#v}"
           SRC=$(sed -n 's/#define CROWMOTION_VERSION "\(.*\)"/\1/p' main/version.h)
           echo "release tag: $VER   version.h: $SRC"
@@ -42,13 +53,13 @@ jobs:
           fi
 
       - name: Build tracker (esp32c3)
-        uses: espressif/esp-idf-ci-action@v1
+        uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
         with:
           esp_idf_version: v5.5.4
           target: esp32c3
 
       - name: Build CrowLink bridge (esp32c6)
-        uses: espressif/esp-idf-ci-action@v1
+        uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
         with:
           esp_idf_version: v5.5.4
           target: esp32c6
@@ -56,12 +67,13 @@ jobs:
 
       - name: Stage site (flasher + OTA)
         run: |
-          VER="${{ github.event.release.tag_name }}"
-          VER="${VER#v}"
-          pip install --quiet "esptool~=4.8"
+          VER="${TAG#v}"
+          pip install --quiet "esptool==4.8.1"
 
           mkdir -p site/flash site/crowmotion
-          cp flasher/index.html site/index.html
+          # Copy the whole flasher (index.html + vendored esp-web-tools);
+          # nothing is loaded from a third-party CDN.
+          cp -R flasher/. site/
 
           # CORS: let the flasher embedded on crowpilot.in fetch the
           # manifest and images cross-origin (Cloudflare Pages _headers).
@@ -110,17 +122,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VER="${{ github.event.release.tag_name }}"
-          VER="${VER#v}"
+          VER="${TAG#v}"
           cp bridge/build/crowlink.bin "crowlink-${VER}.bin"
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "$TAG" \
             "site/crowmotion/crowmotion-${VER}.bin" \
             "crowlink-${VER}.bin" \
             "site/flash/crowmotion-merged.bin" \
             "site/flash/crowlink-merged.bin" --clobber
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: 2fca98f9bd732794c53117b67c5b4593

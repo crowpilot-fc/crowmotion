@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- esp-web-tools is vendored same-origin under ./vendor (no third-party CDN);
+     connect-src allows the firmware manifest/images on the update host. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://updates.crowpilot.in; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <title>CrowMotion - a $5 wireless FPV head tracker</title>
 <meta name="description" content="CrowMotion is an open-source wireless head tracker for FPV flying that you can build for about 5 dollars. Flash it straight from your browser.">
 <link rel="canonical" href="https://crowpilot.in/crowmotion/">
@@ -22,7 +25,7 @@ summary::-webkit-details-marker { display: none; }
 .hv4:hover{background:#fafafa}
 .hv5:hover{color:#0b0b0c}
 </style>
-<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<script type="module" src="./vendor/esp-web-tools/web/install-button.js"></script>
 </head>
 <body>
 <header style="position:sticky;top:0;z-index:50;background:rgba(245,245,247,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid #e7e7ea">
