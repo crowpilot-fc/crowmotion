@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: Apache-2.0
+     CrowMotion browser flasher, served at https://updates.crowpilot.in/
+     Flashes CrowMotion (ESP32-C3) or CrowLink (ESP32-C6) over USB from
+     Chrome/Edge via Web Serial, using ESP Web Tools. The manifest and
+     merged firmware images are published next to this page by the
+     release-ota GitHub workflow. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrowMotion Flasher</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Helvetica, Arial, sans-serif;
+    max-width: 640px; margin: 0 auto; padding: 32px 20px 60px;
+    color: #1c1d21; background: #fafafa; line-height: 1.55;
+  }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: #6b6e76; margin: 0 0 28px; }
+  .card {
+    background: #fff; border: 1px solid #e8e8ec; border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 18px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 10px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: #8a8d94; }
+  ol { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  code { background: #f1f1f3; border-radius: 4px; padding: 1px 5px;
+    font-size: 13px; }
+  esp-web-install-button { --esp-tools-button-color: #1c1d21;
+    --esp-tools-button-text-color: #fff; }
+  .note { font-size: 13.5px; color: #6b6e76; }
+  a { color: #1c1d21; }
+  .foot { margin-top: 28px; font-size: 13px; color: #9a9ca3; }
+</style>
+</head>
+<body>
+  <h1>CrowMotion Flasher</h1>
+  <p class="sub">Flash the head tracker or the CrowLink bridge straight from
+    your browser. No drivers, no toolchain.</p>
+
+  <div class="card">
+    <h2>Flash</h2>
+    <ol>
+      <li>Plug the board into this computer over USB-C.</li>
+      <li>Click Connect and pick the serial port
+        (<code>USB JTAG/serial</code>).</li>
+      <li>The right firmware is chosen automatically:
+        ESP32-C3 gets CrowMotion, ESP32-C6 gets CrowLink.</li>
+    </ol>
+    <p style="margin:16px 0 4px">
+      <esp-web-install-button manifest="flash/manifest.json">
+        <span slot="unsupported">This browser cannot flash over USB.
+          Use Chrome or Edge on a desktop computer.</span>
+        <span slot="not-allowed">Flashing needs a secure (https) page.</span>
+      </esp-web-install-button>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>If the board is not detected</h2>
+    <ol>
+      <li>Use a data-capable USB-C cable (many are charge-only).</li>
+      <li>Hold the BOOT button while plugging in, then try again.</li>
+      <li>Close anything else using the serial port
+        (serial monitors, IDEs).</li>
+    </ol>
+    <p class="note">First install on a used board? Choose "Erase device" when
+      offered, it clears old settings cleanly.</p>
+  </div>
+
+  <div class="card">
+    <h2>What gets flashed</h2>
+    <p class="note">Complete firmware images (bootloader, partition table,
+      app) built and published automatically from tagged releases of
+      <a href="https://github.com/crowpilot-fc/crowmotion">crowpilot-fc/crowmotion</a>.
+      After flashing, updates can be installed wirelessly from the device's
+      own config UI.</p>
+  </div>
+
+  <p class="foot">CrowMotion - open-source FPV head tracker -
+    <a href="https://github.com/crowpilot-fc/crowmotion">GitHub</a> -
+    Apache-2.0</p>
+
+  <script type="module"
+    src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module">
+  </script>
+</body>
+</html>

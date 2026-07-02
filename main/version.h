@@ -7,7 +7,7 @@
 #pragma once
 
 // Bump on each release. Compared against the update manifest's "version".
-#define CROWMOTION_VERSION "0.1.0"
+#define CROWMOTION_VERSION "0.1.1"
 
 // Update manifest URL. The server (set up later) should serve JSON:
 //   { "version": "0.2.0",

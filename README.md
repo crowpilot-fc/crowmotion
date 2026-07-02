@@ -110,6 +110,15 @@ Four wires, all on one side of the board next to 3V3 and GND:
 Compatibility: FrSky radios with the **PARA wireless (Bluetooth) trainer**.
 Developed against an **FrSky X20S (Tandem) on EthOS**.
 
+## Flash from your browser (no toolchain)
+
+The quickest way to get firmware onto a board: plug it into your computer
+over USB-C and open **https://updates.crowpilot.in/** in Chrome or Edge.
+The flasher runs entirely in the browser (Web Serial), detects the chip,
+and installs the matching firmware - CrowMotion on an ESP32-C3, CrowLink
+on an ESP32-C6. No drivers or build tools needed. After the first flash,
+further updates can be installed wirelessly from the device's own config UI.
+
 ## Build and flash
 
 You need Espressif ESP-IDF (v5.5.x). Full setup, build, and flash steps for

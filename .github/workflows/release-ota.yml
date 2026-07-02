@@ -1,11 +1,17 @@
-# Publish a firmware release to the OTA update server.
+# Publish a firmware release to the OTA update server and browser flasher.
 #
 # Triggered ONLY when a GitHub release is published (not on pushes or tag
-# creation). Builds the tagged source, verifies the tag matches version.h,
-# attaches the built .bin to the release, and deploys the OTA manifest +
-# binary to Cloudflare Pages (updates.crowpilot.in).
+# creation). Builds both targets from the tagged source, verifies the tag
+# matches version.h, attaches the app binaries to the release, and deploys
+# the full site to Cloudflare Pages (updates.crowpilot.in):
 #
-# Each Pages deploy replaces the site, so only the newest binary lives on
+#   /                          browser flasher (ESP Web Tools)
+#   /flash/manifest.json       flasher manifest (chip -> image)
+#   /flash/*-merged.bin        complete images (bootloader+partitions+app)
+#   /crowmotion/latest.json    OTA manifest checked by devices
+#   /crowmotion/crowmotion-X.Y.Z.bin  OTA app image
+#
+# Each Pages deploy replaces the site, so only the newest binaries live on
 # the update host; all historical binaries remain on GitHub Releases.
 name: release-ota
 
@@ -14,7 +20,7 @@ on:
     types: [published]
 
 permissions:
-  contents: write # upload the built .bin to the release
+  contents: write # upload the built binaries to the release
 
 jobs:
   publish:
@@ -35,35 +41,83 @@ jobs:
             exit 1
           fi
 
-      - name: Build with ESP-IDF
+      - name: Build tracker (esp32c3)
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v5.5.4
           target: esp32c3
 
-      - name: Stage OTA site
+      - name: Build CrowLink bridge (esp32c6)
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32c6
+          path: bridge
+
+      - name: Stage site (flasher + OTA)
         run: |
           VER="${{ github.event.release.tag_name }}"
           VER="${VER#v}"
-          mkdir -p ota-site/crowmotion
-          sudo cp build/crowmotion.bin "ota-site/crowmotion/crowmotion-${VER}.bin"
-          sudo chown "$USER" "ota-site/crowmotion/crowmotion-${VER}.bin"
-          printf '{"version":"%s","url":"https://updates.crowpilot.in/crowmotion/crowmotion-%s.bin"}\n' \
-            "$VER" "$VER" > ota-site/crowmotion/latest.json
-          echo "manifest:" && cat ota-site/crowmotion/latest.json
+          pip install --quiet "esptool~=4.8"
 
-      - name: Attach binary to the release
+          mkdir -p site/flash site/crowmotion
+          cp flasher/index.html site/index.html
+
+          # Complete flash images for the browser flasher (offset 0).
+          esptool.py --chip esp32c3 merge_bin \
+            -o site/flash/crowmotion-merged.bin \
+            --flash_mode dio --flash_size 4MB \
+            0x0 build/bootloader/bootloader.bin \
+            0x8000 build/partition_table/partition-table.bin \
+            0xf000 build/ota_data_initial.bin \
+            0x20000 build/crowmotion.bin
+          esptool.py --chip esp32c6 merge_bin \
+            -o site/flash/crowlink-merged.bin \
+            --flash_mode dio --flash_size 2MB \
+            0x0 bridge/build/bootloader/bootloader.bin \
+            0x8000 bridge/build/partition_table/partition-table.bin \
+            0x10000 bridge/build/crowlink.bin
+
+          cat > site/flash/manifest.json <<EOF
+          {
+            "name": "CrowMotion / CrowLink",
+            "version": "${VER}",
+            "new_install_prompt_erase": true,
+            "builds": [
+              {
+                "chipFamily": "ESP32-C3",
+                "parts": [ { "path": "crowmotion-merged.bin", "offset": 0 } ]
+              },
+              {
+                "chipFamily": "ESP32-C6",
+                "parts": [ { "path": "crowlink-merged.bin", "offset": 0 } ]
+              }
+            ]
+          }
+          EOF
+
+          # OTA: app image + manifest the devices poll.
+          cp build/crowmotion.bin "site/crowmotion/crowmotion-${VER}.bin"
+          printf '{"version":"%s","url":"https://updates.crowpilot.in/crowmotion/crowmotion-%s.bin"}\n' \
+            "$VER" "$VER" > site/crowmotion/latest.json
+          echo "manifest:" && cat site/crowmotion/latest.json
+
+      - name: Attach binaries to the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VER="${{ github.event.release.tag_name }}"
           VER="${VER#v}"
+          cp bridge/build/crowlink.bin "crowlink-${VER}.bin"
           gh release upload "${{ github.event.release.tag_name }}" \
-            "ota-site/crowmotion/crowmotion-${VER}.bin" --clobber
+            "site/crowmotion/crowmotion-${VER}.bin" \
+            "crowlink-${VER}.bin" \
+            "site/flash/crowmotion-merged.bin" \
+            "site/flash/crowlink-merged.bin" --clobber
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: 2fca98f9bd732794c53117b67c5b4593
-          command: pages deploy ota-site --project-name crowmotion-updates
+          command: pages deploy site --project-name crowmotion-updates
