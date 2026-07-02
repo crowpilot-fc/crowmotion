@@ -102,8 +102,14 @@ uint16_t para_ble_get_channel(uint8_t ch)
 // --- PARA frame encoding -----------------------------------------------------
 
 // Append one byte: update XOR CRC, byte-stuff START_STOP/BYTE_STUFF values.
+// Worst case frame (all bytes stuffed) is 1 + 2 + 12*2 + 1 + 1 = 29 bytes,
+// which fits PARA_FRAME_MAX (32); the bound check is a guard against future
+// edits growing the payload past the buffer.
 static void para_push(uint8_t *buf, uint8_t *idx, uint8_t *crc, uint8_t b)
 {
+    if (*idx >= PARA_FRAME_MAX - 1) {
+        return;  // never overrun the frame buffer
+    }
     *crc ^= b;
     if (b == PARA_START_STOP || b == PARA_BYTE_STUFF) {
         buf[(*idx)++] = PARA_BYTE_STUFF;

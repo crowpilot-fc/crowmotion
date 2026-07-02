@@ -22,6 +22,12 @@ void madgwick_init(madgwick_t *f, float beta)
 
 void madgwick_set_from_accel(madgwick_t *f, float ax, float ay, float az)
 {
+    // A near-zero or non-finite accel vector has no usable direction; keep
+    // the current (identity) quaternion rather than seeding from garbage.
+    float norm = sqrtf(ax * ax + ay * ay + az * az);
+    if (!isfinite(norm) || norm < 1e-4f) {
+        return;
+    }
     // Roll about X and pitch about Y from the gravity direction; yaw = 0.
     float roll = atan2f(ay, az);
     float pitch = atan2f(-ax, sqrtf(ay * ay + az * az));
@@ -47,9 +53,12 @@ void madgwick_update_imu(madgwick_t *f, float gx, float gy, float gz,
     qDot3 = 0.5f * (q0 * gy - q1 * gz + q3 * gx);
     qDot4 = 0.5f * (q0 * gz + q1 * gy - q2 * gx);
 
-    // Apply accelerometer correction only if the reading is usable.
-    if (!(ax == 0.0f && ay == 0.0f && az == 0.0f)) {
-        recipNorm = 1.0f / sqrtf(ax * ax + ay * ay + az * az);
+    // Apply accelerometer correction only if the reading is usable: a
+    // near-zero or non-finite vector would turn the normalization into
+    // Inf/NaN and permanently poison the quaternion.
+    float anorm = sqrtf(ax * ax + ay * ay + az * az);
+    if (isfinite(anorm) && anorm > 1e-4f) {
+        recipNorm = 1.0f / anorm;
         ax *= recipNorm;
         ay *= recipNorm;
         az *= recipNorm;
@@ -66,16 +75,19 @@ void madgwick_update_imu(madgwick_t *f, float gx, float gy, float gz,
         s2 = 4.0f * q0q0 * q2 + _2q0 * ax + _4q2 * q3q3 - _2q3 * ay - _4q2 +
              _8q2 * q1q1 + _8q2 * q2q2 + _4q2 * az;
         s3 = 4.0f * q1q1 * q3 - _2q1 * ax + 4.0f * q2q2 * q3 - _2q2 * ay;
-        recipNorm = 1.0f / sqrtf(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3);
-        s0 *= recipNorm;
-        s1 *= recipNorm;
-        s2 *= recipNorm;
-        s3 *= recipNorm;
+        float snorm = sqrtf(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3);
+        if (isfinite(snorm) && snorm > 1e-9f) {
+            recipNorm = 1.0f / snorm;
+            s0 *= recipNorm;
+            s1 *= recipNorm;
+            s2 *= recipNorm;
+            s3 *= recipNorm;
 
-        qDot1 -= f->beta * s0;
-        qDot2 -= f->beta * s1;
-        qDot3 -= f->beta * s2;
-        qDot4 -= f->beta * s3;
+            qDot1 -= f->beta * s0;
+            qDot2 -= f->beta * s1;
+            qDot3 -= f->beta * s2;
+            qDot4 -= f->beta * s3;
+        }
     }
 
     // Integrate and renormalize.
@@ -83,7 +95,17 @@ void madgwick_update_imu(madgwick_t *f, float gx, float gy, float gz,
     q1 += qDot2 * dt;
     q2 += qDot3 * dt;
     q3 += qDot4 * dt;
-    recipNorm = 1.0f / sqrtf(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+    float qnorm = sqrtf(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+    if (!isfinite(qnorm) || qnorm < 1e-6f) {
+        // Corrupted state (bad dt or poisoned input): reset to identity and
+        // let the accel correction re-converge instead of staying NaN forever.
+        f->q0 = 1.0f;
+        f->q1 = 0.0f;
+        f->q2 = 0.0f;
+        f->q3 = 0.0f;
+        return;
+    }
+    recipNorm = 1.0f / qnorm;
     f->q0 = q0 * recipNorm;
     f->q1 = q1 * recipNorm;
     f->q2 = q2 * recipNorm;

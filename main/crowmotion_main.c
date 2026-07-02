@@ -7,12 +7,13 @@
 // Original implementation. Inspired by RC HeadTracker (dlktdr) and
 // HeadTracker (ysoldak); no code from those projects is reused.
 //
-// Build target: ESP32-C3 (Super Mini or Seeed XIAO), ESP-IDF + NimBLE.
+// Build target: ESP32-C3 Super Mini, ESP-IDF + NimBLE.
 
 #include <math.h>
 
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_ota_ops.h"
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -63,10 +64,19 @@ static void autodetect_orientation(float ax, float ay, float az)
 #define BIAS_SAMPLES 100              // ~1 s startup gyro-bias estimate
 #define SETTLE_ITERS 50               // ~0.5 s for fusion to converge before centering
 #define DEG_TO_RAD 0.01745329252f
-#define STILL_DPS 2.0f                // gyro below this (bias-corrected) = "still"
-#define BIAS_ALPHA 0.002f             // gyro-bias tracking rate while still (M4)
-#define TAP_GYRO_MAX_DPS 40.0f        // ignore "taps" while rotating faster than this
-#define TAP_GAP_MIN_MS 80             // double-tap: 2nd tap this long after the 1st
+#define STILL_JITTER_DPS 1.5f         // sample-to-sample gyro change (sum of axes)
+                                      // below this = the board is not being moved
+#define STILL_ACC_TOL 0.06f           // accel within this of 1 g = not translating
+#define STILL_GYRO_MAX_DPS 12.0f      // raw gyro below this may be bias, not a turn
+#define BIAS_ALPHA 0.004f             // gyro-bias tracking rate while still (M4)
+#define TAP_GYRO_MAX_DPS 300.0f       // ignore "taps" only during extreme spins; a
+                                      // real tap kicks the gyro to ~50-200 dps, so
+                                      // this must sit well above that (was 40, which
+                                      // rejected most genuine taps)
+#define TAP_GAP_MIN_MS 150           // debounce: a single tap rings for ~100 ms, so
+                                      // ignore crossings closer than this (one tap =
+                                      // one count); the 2nd tap of a double must be
+                                      // at least this long after the 1st
 #define TAP_GAP_MAX_MS 600
 
 // Board-orientation remap: rotate the IMU axes into the canonical frame (Z up)
@@ -81,6 +91,7 @@ static void board_remap(imu_sample_t *s)
     float ao[3], go[3];
     for (int i = 0; i < 3; i++) {
         int idx = (r[i] < 0 ? -r[i] : r[i]) - 1;  // 0..2
+        if (idx < 0 || idx > 2) idx = i;          // defensive: identity on bad remap
         float sign = (r[i] < 0) ? -1.0f : 1.0f;
         ao[i] = sign * a[idx];
         go[i] = sign * g[idx];
@@ -130,6 +141,7 @@ static void fusion_task(void *arg)
     float last_amag = 1.0f;
     int64_t last_tap_ms = 0;
     int tap_count = 0;
+    float gpx = bx, gpy = by, gpz = bz;  // previous raw gyro, for jitter detection
     for (;;) {
         imu_sample_t s;
         if (mpu6500_read(&s) == ESP_OK) {
@@ -145,18 +157,29 @@ static void fusion_task(void *arg)
                 dt = FUSION_PERIOD_MS / 1000.0f;  // guard against jitter
             }
 
-            // Continuous gyro auto-calibration (M4): while the board is still,
-            // slowly track the gyro bias so yaw does not drift.
-            float dgx = s.gx - bx, dgy = s.gy - by, dgz = s.gz - bz;
-            if (fabsf(dgx) < STILL_DPS && fabsf(dgy) < STILL_DPS &&
-                fabsf(dgz) < STILL_DPS) {
-                bx += BIAS_ALPHA * dgx;
-                by += BIAS_ALPHA * dgy;
-                bz += BIAS_ALPHA * dgz;
-                dgx = s.gx - bx;
-                dgy = s.gy - by;
-                dgz = s.gz - bz;
+            // Continuous gyro auto-calibration (M4): track the gyro bias while the
+            // board is still so yaw does not drift. Stillness is detected from the
+            // sample-to-sample gyro change and near-1g accel (both independent of
+            // the current bias estimate) plus a raw-gyro ceiling that rejects
+            // deliberate turns. When still, the bias is pulled toward the raw gyro,
+            // so a wrong startup estimate self-heals instead of locking calibration
+            // out (which is what made yaw drift to the rail).
+            float jitter = fabsf(s.gx - gpx) + fabsf(s.gy - gpy) + fabsf(s.gz - gpz);
+            gpx = s.gx;
+            gpy = s.gy;
+            gpz = s.gz;
+            float amg = sqrtf(s.ax * s.ax + s.ay * s.ay + s.az * s.az);
+            bool board_still = jitter < STILL_JITTER_DPS &&
+                               fabsf(amg - 1.0f) < STILL_ACC_TOL &&
+                               fabsf(s.gx) < STILL_GYRO_MAX_DPS &&
+                               fabsf(s.gy) < STILL_GYRO_MAX_DPS &&
+                               fabsf(s.gz) < STILL_GYRO_MAX_DPS;
+            if (board_still) {
+                bx += BIAS_ALPHA * (s.gx - bx);
+                by += BIAS_ALPHA * (s.gy - by);
+                bz += BIAS_ALPHA * (s.gz - bz);
             }
+            float dgx = s.gx - bx, dgy = s.gy - by, dgz = s.gz - bz;
             madgwick_update_imu(&filt, dgx * DEG_TO_RAD, dgy * DEG_TO_RAD,
                                 dgz * DEG_TO_RAD, s.ax, s.ay, s.az, dt);
 
@@ -263,6 +286,12 @@ void app_main(void)
         ESP_LOGW(TAG, "Continuing without IMU. Check the wiring (pins logged "
                       "above), AD0=GND, VCC=3V3, then reset.");
     }
+
+    // With bootloader rollback enabled, a freshly OTA'd image boots as
+    // "pending verify". Getting this far (NVS, config, BLE up, IMU probed)
+    // counts as a good boot; mark it valid so the bootloader keeps it.
+    // If the image crashes before this line, the next reset rolls back.
+    esp_ota_mark_app_valid_cancel_rollback();
 
     ESP_LOGI(TAG, "CrowMotion up. Waiting for radio (X20S) to connect.");
 }

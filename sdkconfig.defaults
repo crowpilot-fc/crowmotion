@@ -1,4 +1,4 @@
-# CrowMotion default build configuration for the Seeed XIAO ESP32-C3.
+# CrowMotion default build configuration for the ESP32-C3 Super Mini.
 # These seed sdkconfig on first build. Override locally with `idf.py menuconfig`;
 # do not commit the generated sdkconfig (it is gitignored).
 
@@ -15,7 +15,7 @@ CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
 # Advertised device name (the radio sees this as the trainer source).
 CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="CrowMotion"
 
-# --- Flash size (4MB on the C3 Super Mini / XIAO; needed for OTA partitions) ---
+# --- Flash size (4MB on the C3 Super Mini; needed for OTA partitions) ---
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
 
@@ -23,10 +23,15 @@ CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
+# --- OTA safety: a new image must mark itself valid after boot, or the
+# bootloader rolls back to the previous one on the next reset. The app calls
+# esp_ota_mark_app_valid_cancel_rollback() at the end of app_main.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
 # --- Logging ---
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
-# --- Console over the XIAO USB-C (native USB serial/JTAG) ---
+# --- Console over USB-C (native USB serial/JTAG) ---
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 
 # --- Config mode: WiFi softAP + BLE coexistence, HTTP server WebSocket ---

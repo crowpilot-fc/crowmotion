@@ -49,6 +49,9 @@ typedef struct {
     // --- Home WiFi (station) for internet / server OTA ---
     char wifi_ssid[33];
     char wifi_pass[65];
+
+    // --- Config hotspot WPA2 passphrase (8..64 chars; default "crowmotion") ---
+    char ap_pass[65];
 } crowmotion_config_t;
 
 // Load config from NVS, or apply defaults if absent/invalid. Call once at boot.

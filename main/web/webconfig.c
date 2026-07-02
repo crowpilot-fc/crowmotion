@@ -20,6 +20,7 @@
 #include "esp_https_ota.h"
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
+#include "lwip/sockets.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -34,7 +35,9 @@
 
 static const char *TAG = "webcfg";
 
-// Default WPA2 passphrase for the config hotspot (>= 8 chars required).
+// Fallback WPA2 passphrase for the config hotspot (>= 8 chars required).
+// The actual passphrase comes from config (ap_pass, changeable in the UI);
+// this is only used if the stored one is somehow empty.
 #define CROWMOTION_AP_PASSWORD "crowmotion"
 
 // Embedded single-page app (web/index.html).
@@ -64,8 +67,49 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id,
 
 // --- HTTP handlers -----------------------------------------------------------
 
+// Allow requests only from clients on the hotspot (AP) subnet. In AP+STA mode
+// the HTTP server also listens on the home-network (STA) interface; config,
+// recenter, and OTA must not be reachable from there.
+static bool client_on_ap(httpd_req_t *req)
+{
+    if (!s_ap_netif) {
+        return false;
+    }
+    int fd = httpd_req_to_sockfd(req);
+    struct sockaddr_in6 sa;
+    socklen_t len = sizeof(sa);
+    if (fd < 0 || getpeername(fd, (struct sockaddr *)&sa, &len) != 0) {
+        return false;
+    }
+    uint32_t peer;
+    if (sa.sin6_family == AF_INET) {
+        peer = ((struct sockaddr_in *)&sa)->sin_addr.s_addr;
+    } else if (sa.sin6_family == AF_INET6) {
+        peer = sa.sin6_addr.un.u32_addr[3];  // IPv4-mapped IPv6
+    } else {
+        return false;
+    }
+    esp_netif_ip_info_t ip;
+    if (esp_netif_get_ip_info(s_ap_netif, &ip) != ESP_OK) {
+        return false;
+    }
+    return (peer & ip.netmask.addr) == (ip.ip.addr & ip.netmask.addr);
+}
+
+// Returns true if the request may proceed; otherwise sends 403 and the
+// caller must return immediately.
+#define REQUIRE_AP_CLIENT(req)                                                \
+    do {                                                                      \
+        if (!client_on_ap(req)) {                                             \
+            httpd_resp_send_err(req, HTTPD_403_FORBIDDEN,                     \
+                                "config is only served on the hotspot");     \
+            return ESP_FAIL;                                                  \
+        }                                                                     \
+    } while (0)
+
 static esp_err_t h_root(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     httpd_resp_set_type(req, "text/html");
     httpd_resp_send(req, (const char *)index_html_start,
                     index_html_end - index_html_start);
@@ -74,6 +118,7 @@ static esp_err_t h_root(httpd_req_t *req)
 
 static esp_err_t h_get_config(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     char *json = config_to_json();
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json ? json : "{}");
@@ -101,6 +146,7 @@ static esp_err_t read_body(httpd_req_t *req, char *buf, size_t buflen)
 
 static esp_err_t h_post_config(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     char buf[1024];
     if (read_body(req, buf, sizeof(buf)) != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "bad body");
@@ -114,6 +160,7 @@ static esp_err_t h_post_config(httpd_req_t *req)
 
 static esp_err_t h_post_recenter(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     tracker_request_recenter();
     httpd_resp_sendstr(req, "ok");
     return ESP_OK;
@@ -121,6 +168,7 @@ static esp_err_t h_post_recenter(httpd_req_t *req)
 
 static esp_err_t h_post_autodetect(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     tracker_request_autodetect();
     httpd_resp_sendstr(req, "ok");
     return ESP_OK;
@@ -128,6 +176,7 @@ static esp_err_t h_post_autodetect(httpd_req_t *req)
 
 static esp_err_t h_post_exit(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     httpd_resp_sendstr(req, "ok");
     webconfig_request_toggle();
     return ESP_OK;
@@ -205,6 +254,7 @@ static void ota_check_task(void *arg)
 
 static esp_err_t h_post_checkupdate(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     if (config_get()->wifi_ssid[0] == '\0') {
         httpd_resp_sendstr(req, "set home WiFi first");
         return ESP_OK;
@@ -217,6 +267,7 @@ static esp_err_t h_post_checkupdate(httpd_req_t *req)
 
 static esp_err_t h_get_status(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     httpd_resp_sendstr(req, s_ota_status);
     return ESP_OK;
 }
@@ -224,6 +275,7 @@ static esp_err_t h_get_status(httpd_req_t *req)
 // Local update: the page POSTs a firmware .bin as the body; flash it.
 static esp_err_t h_post_update(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     const esp_partition_t *part = esp_ota_get_next_update_partition(NULL);
     esp_ota_handle_t ota;
     if (!part || esp_ota_begin(part, OTA_SIZE_UNKNOWN, &ota) != ESP_OK) {
@@ -260,6 +312,7 @@ static esp_err_t h_post_update(httpd_req_t *req)
 
 static esp_err_t h_ws(httpd_req_t *req)
 {
+    REQUIRE_AP_CLIENT(req);
     if (req->method == HTTP_GET) {
         s_ws_fd = httpd_req_to_sockfd(req);  // handshake; remember the client
         ESP_LOGI(TAG, "websocket client connected (fd %d)", s_ws_fd);
@@ -330,7 +383,9 @@ static void wifi_ap_start(void)
     int n = snprintf((char *)ap.ap.ssid, sizeof(ap.ap.ssid),
                      "crowmotion-%02x%02x", mac[4], mac[5]);
     ap.ap.ssid_len = n;
-    strlcpy((char *)ap.ap.password, CROWMOTION_AP_PASSWORD, sizeof(ap.ap.password));
+    strlcpy((char *)ap.ap.password,
+            (strlen(cf->ap_pass) >= 8) ? cf->ap_pass : CROWMOTION_AP_PASSWORD,
+            sizeof(ap.ap.password));
     ap.ap.channel = 1;
     ap.ap.max_connection = 4;
     ap.ap.authmode = WIFI_AUTH_WPA2_PSK;

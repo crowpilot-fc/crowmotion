@@ -8,6 +8,8 @@
 
 #include <string.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
@@ -19,7 +21,7 @@ static const char *TAG = "config";
 
 #define CFG_NVS_NAMESPACE "crowmotion"
 #define CFG_NVS_KEY "cfg"
-#define CFG_VERSION 2   // bump when the struct layout changes incompatibly
+#define CFG_VERSION 3   // bump when the struct layout changes incompatibly
 
 static crowmotion_config_t s_cfg;
 
@@ -44,8 +46,9 @@ void config_set_defaults(crowmotion_config_t *c)
     c->remap[0] = 2;        // temple mount: canonical x <- +imu y
     c->remap[1] = 3;        //               canonical y <- +imu z
     c->remap[2] = 1;        //               canonical z <- +imu x
-    c->tap_intensity = 20.0f;
+    c->tap_intensity = 25.0f;
     strncpy(c->name, "CrowMotion", sizeof(c->name) - 1);
+    strncpy(c->ap_pass, "crowmotion", sizeof(c->ap_pass) - 1);
 }
 
 void config_init(void)
@@ -101,11 +104,36 @@ char *config_to_json(void)
     cJSON_AddItemToObject(j, "remap", cJSON_CreateIntArray(rm, 3));
     cJSON_AddNumberToObject(j, "tap", c->tap_intensity);
     cJSON_AddStringToObject(j, "name", c->name);
-    cJSON_AddStringToObject(j, "wifi_ssid", c->wifi_ssid);  // password not exposed
+    cJSON_AddStringToObject(j, "wifi_ssid", c->wifi_ssid);  // passwords (wifi_pass,
+                                                            // ap_pass) never exposed
     cJSON_AddStringToObject(j, "version", CROWMOTION_VERSION);
     char *out = cJSON_PrintUnformatted(j);
     cJSON_Delete(j);
     return out;
+}
+
+// Commit a fully validated config in one shot so the 100 Hz fusion task can
+// never observe a word-torn field mid-write (it may still see a mix of old
+// and new fields across one 10 ms cycle, which is harmless and self-corrects).
+static portMUX_TYPE s_cfg_mux = portMUX_INITIALIZER_UNLOCKED;
+
+static void config_commit(const crowmotion_config_t *nc)
+{
+    taskENTER_CRITICAL(&s_cfg_mux);
+    s_cfg = *nc;
+    taskEXIT_CRITICAL(&s_cfg_mux);
+}
+
+static float clampf(float v, float lo, float hi)
+{
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+static uint16_t clamp_us(double v)
+{
+    if (v < 988.0) return 988;
+    if (v > 2012.0) return 2012;
+    return (uint16_t)v;
 }
 
 esp_err_t config_apply_json(const char *json)
@@ -114,40 +142,109 @@ esp_err_t config_apply_json(const char *json)
     if (!j) {
         return ESP_ERR_INVALID_ARG;
     }
+
+    // Work on a copy; commit atomically at the end.
+    crowmotion_config_t nc = s_cfg;
+
     if (cJSON_GetObjectItem(j, "reset")) {
-        config_set_defaults(&s_cfg);
+        config_set_defaults(&nc);
         cJSON_Delete(j);
+        config_commit(&nc);
         return ESP_OK;
     }
-    crowmotion_config_t *c = &s_cfg;
+
+    crowmotion_config_t *c = &nc;
     cJSON *it;
-#define GET_NUM(key, field)                                              \
-    if ((it = cJSON_GetObjectItem(j, key)) && cJSON_IsNumber(it)) {       \
-        c->field = it->valuedouble;                                      \
+
+    // Channel assignment: only 0..7 (TR1..TR8) is meaningful; ignore junk.
+    if ((it = cJSON_GetObjectItem(j, "pan_ch")) && cJSON_IsNumber(it) &&
+        it->valuedouble >= 0 && it->valuedouble <= 7) {
+        c->pan_ch = (uint8_t)it->valuedouble;
     }
-    GET_NUM("pan_ch", pan_ch);
-    GET_NUM("tilt_ch", tilt_ch);
-    GET_NUM("pan_en", pan_enabled);
-    GET_NUM("tilt_en", tilt_enabled);
-    GET_NUM("pan_gain", pan_gain);
-    GET_NUM("tilt_gain", tilt_gain);
-    GET_NUM("pan_inv", pan_invert);
-    GET_NUM("tilt_inv", tilt_invert);
-    GET_NUM("deadband", deadband_deg);
-    GET_NUM("pan_center", pan_center);
-    GET_NUM("pan_min", pan_min);
-    GET_NUM("pan_max", pan_max);
-    GET_NUM("tilt_center", tilt_center);
-    GET_NUM("tilt_min", tilt_min);
-    GET_NUM("tilt_max", tilt_max);
-    GET_NUM("tap", tap_intensity);
-#undef GET_NUM
+    if ((it = cJSON_GetObjectItem(j, "tilt_ch")) && cJSON_IsNumber(it) &&
+        it->valuedouble >= 0 && it->valuedouble <= 7) {
+        c->tilt_ch = (uint8_t)it->valuedouble;
+    }
+    if ((it = cJSON_GetObjectItem(j, "pan_en")) && cJSON_IsNumber(it)) {
+        c->pan_enabled = it->valuedouble != 0 ? 1 : 0;
+    }
+    if ((it = cJSON_GetObjectItem(j, "tilt_en")) && cJSON_IsNumber(it)) {
+        c->tilt_enabled = it->valuedouble != 0 ? 1 : 0;
+    }
+
+    // Response shaping, clamped to sane physical ranges.
+    if ((it = cJSON_GetObjectItem(j, "pan_gain")) && cJSON_IsNumber(it)) {
+        c->pan_gain = clampf(it->valuedouble, 0.5f, 50.0f);
+    }
+    if ((it = cJSON_GetObjectItem(j, "tilt_gain")) && cJSON_IsNumber(it)) {
+        c->tilt_gain = clampf(it->valuedouble, 0.5f, 50.0f);
+    }
+    if ((it = cJSON_GetObjectItem(j, "pan_inv")) && cJSON_IsNumber(it)) {
+        c->pan_invert = it->valuedouble < 0 ? -1 : 1;
+    }
+    if ((it = cJSON_GetObjectItem(j, "tilt_inv")) && cJSON_IsNumber(it)) {
+        c->tilt_invert = it->valuedouble < 0 ? -1 : 1;
+    }
+    if ((it = cJSON_GetObjectItem(j, "deadband")) && cJSON_IsNumber(it)) {
+        c->deadband_deg = clampf(it->valuedouble, 0.0f, 45.0f);  // never negative
+    }
+
+    // Output range: clamp to the PARA channel range, then enforce min <= max
+    // (an inverted pair would invert the output clamp in mapping.c).
+    if ((it = cJSON_GetObjectItem(j, "pan_center")) && cJSON_IsNumber(it)) {
+        c->pan_center = clamp_us(it->valuedouble);
+    }
+    if ((it = cJSON_GetObjectItem(j, "pan_min")) && cJSON_IsNumber(it)) {
+        c->pan_min = clamp_us(it->valuedouble);
+    }
+    if ((it = cJSON_GetObjectItem(j, "pan_max")) && cJSON_IsNumber(it)) {
+        c->pan_max = clamp_us(it->valuedouble);
+    }
+    if ((it = cJSON_GetObjectItem(j, "tilt_center")) && cJSON_IsNumber(it)) {
+        c->tilt_center = clamp_us(it->valuedouble);
+    }
+    if ((it = cJSON_GetObjectItem(j, "tilt_min")) && cJSON_IsNumber(it)) {
+        c->tilt_min = clamp_us(it->valuedouble);
+    }
+    if ((it = cJSON_GetObjectItem(j, "tilt_max")) && cJSON_IsNumber(it)) {
+        c->tilt_max = clamp_us(it->valuedouble);
+    }
+    if (c->pan_min > c->pan_max) {
+        uint16_t t = c->pan_min; c->pan_min = c->pan_max; c->pan_max = t;
+    }
+    if (c->tilt_min > c->tilt_max) {
+        uint16_t t = c->tilt_min; c->tilt_min = c->tilt_max; c->tilt_max = t;
+    }
+
+    if ((it = cJSON_GetObjectItem(j, "tap")) && cJSON_IsNumber(it)) {
+        c->tap_intensity = clampf(it->valuedouble, 6.0f, 60.0f);
+    }
+
+    // Orientation remap: each entry must be a number in {+/-1,+/-2,+/-3};
+    // reject the whole array otherwise (board_remap would index out of
+    // bounds on anything else).
     cJSON *rm = cJSON_GetObjectItem(j, "remap");
     if (rm && cJSON_IsArray(rm) && cJSON_GetArraySize(rm) == 3) {
+        int8_t nr[3];
+        bool ok = true;
         for (int i = 0; i < 3; i++) {
-            c->remap[i] = cJSON_GetArrayItem(rm, i)->valueint;
+            cJSON *e = cJSON_GetArrayItem(rm, i);
+            int v = (e && cJSON_IsNumber(e)) ? e->valueint : 0;
+            if (v < -3 || v > 3 || v == 0) {
+                ok = false;
+                break;
+            }
+            nr[i] = (int8_t)v;
+        }
+        if (ok) {
+            c->remap[0] = nr[0];
+            c->remap[1] = nr[1];
+            c->remap[2] = nr[2];
+        } else {
+            ESP_LOGW(TAG, "rejected invalid remap array");
         }
     }
+
     if ((it = cJSON_GetObjectItem(j, "name")) && cJSON_IsString(it)) {
         strncpy(c->name, it->valuestring, sizeof(c->name) - 1);
         c->name[sizeof(c->name) - 1] = '\0';
@@ -160,7 +257,16 @@ esp_err_t config_apply_json(const char *json)
         strncpy(c->wifi_pass, it->valuestring, sizeof(c->wifi_pass) - 1);
         c->wifi_pass[sizeof(c->wifi_pass) - 1] = '\0';
     }
+    // Hotspot passphrase: WPA2 needs 8..64 chars; ignore anything shorter
+    // (an empty string would otherwise silently open the hotspot).
+    if ((it = cJSON_GetObjectItem(j, "ap_pass")) && cJSON_IsString(it) &&
+        strlen(it->valuestring) >= 8 && strlen(it->valuestring) < sizeof(c->ap_pass)) {
+        strncpy(c->ap_pass, it->valuestring, sizeof(c->ap_pass) - 1);
+        c->ap_pass[sizeof(c->ap_pass) - 1] = '\0';
+    }
+
     cJSON_Delete(j);
+    config_commit(&nc);
     return ESP_OK;
 }
 
