@@ -21,7 +21,7 @@ static const char *TAG = "config";
 
 #define CFG_NVS_NAMESPACE "crowmotion"
 #define CFG_NVS_KEY "cfg"
-#define CFG_VERSION 3   // bump when the struct layout changes incompatibly
+#define CFG_VERSION 4   // bump when the struct layout changes incompatibly
 
 static crowmotion_config_t s_cfg;
 
@@ -47,6 +47,7 @@ void config_set_defaults(crowmotion_config_t *c)
     c->remap[1] = 3;        //               canonical y <- +imu z
     c->remap[2] = 1;        //               canonical z <- +imu x
     c->tap_intensity = 25.0f;
+    c->bridge_en = 0;
     strncpy(c->name, "CrowMotion", sizeof(c->name) - 1);
     strncpy(c->ap_pass, "crowmotion", sizeof(c->ap_pass) - 1);
 }
@@ -103,6 +104,7 @@ char *config_to_json(void)
     int rm[3] = {c->remap[0], c->remap[1], c->remap[2]};
     cJSON_AddItemToObject(j, "remap", cJSON_CreateIntArray(rm, 3));
     cJSON_AddNumberToObject(j, "tap", c->tap_intensity);
+    cJSON_AddNumberToObject(j, "bridge_en", c->bridge_en);
     cJSON_AddStringToObject(j, "name", c->name);
     cJSON_AddStringToObject(j, "wifi_ssid", c->wifi_ssid);  // passwords (wifi_pass,
                                                             // ap_pass) never exposed
@@ -218,6 +220,9 @@ esp_err_t config_apply_json(const char *json)
 
     if ((it = cJSON_GetObjectItem(j, "tap")) && cJSON_IsNumber(it)) {
         c->tap_intensity = clampf(it->valuedouble, 6.0f, 60.0f);
+    }
+    if ((it = cJSON_GetObjectItem(j, "bridge_en")) && cJSON_IsNumber(it)) {
+        c->bridge_en = it->valuedouble != 0 ? 1 : 0;
     }
 
     // Orientation remap: each entry must be a number in {+/-1,+/-2,+/-3};

@@ -43,6 +43,9 @@ typedef struct {
     // --- Tap detection ---
     float tap_intensity;  // accel-magnitude jerk threshold (g/s)
 
+    // --- CrowLink bridge ---
+    uint8_t bridge_en;    // broadcast channels over ESP-NOW to a bridge
+
     // --- Identity ---
     char name[20];        // BLE device name and AP SSID base
 

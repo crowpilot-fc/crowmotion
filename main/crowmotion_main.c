@@ -24,6 +24,7 @@
 #include "webconfig.h"
 #include "led.h"
 #include "para_ble.h"
+#include "espnow_tx.h"
 #include "mpu6500.h"
 #include "madgwick.h"
 #include "mapping.h"
@@ -276,6 +277,9 @@ void app_main(void)
         ESP_LOGE(TAG, "PARA link failed to start");
         return;
     }
+
+    // CrowLink bridge broadcast (ESP-NOW). Idle unless enabled in config.
+    crowlink_tx_init();
 
     // Bring up the IMU. If it is not wired yet, keep running so the PARA link
     // still advertises and streams centered channels.

@@ -1,0 +1,8 @@
+# CrowLink default build configuration for the ESP32-C6 Super Mini.
+# These seed sdkconfig on first build (idf.py set-target esp32c6).
+
+# --- Console over USB-C (native USB serial/JTAG) ---
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# --- Logging ---
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

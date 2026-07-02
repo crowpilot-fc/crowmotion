@@ -11,6 +11,7 @@ idf_component_register(
         "config/config.c"
         "web/webconfig.c"
         "led/led.c"
+        "link/espnow_tx.c"
     INCLUDE_DIRS
         "."
         "para"
@@ -20,9 +21,11 @@ idf_component_register(
         "config"
         "web"
         "led"
+        "link"
     EMBED_FILES
         "web/index.html"
     PRIV_REQUIRES
+        crowlink
         bt
         nvs_flash
         esp_driver_i2c

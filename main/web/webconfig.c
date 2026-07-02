@@ -30,6 +30,7 @@
 #include "config.h"
 #include "tracker.h"
 #include "para_ble.h"
+#include "espnow_tx.h"
 #include "version.h"
 #include "led.h"
 
@@ -449,6 +450,7 @@ static void ws_push(void)
 static void enter_config(void)
 {
     para_ble_pause();
+    crowlink_tx_pause();  // release the WiFi radio before the hotspot claims it
     wifi_ap_start();
     httpd_start_all();
     s_active = true;
@@ -465,6 +467,7 @@ static void exit_config(void)
     s_ws_fd = -1;
     wifi_ap_stop();
     para_ble_resume();
+    crowlink_tx_resume();  // re-arm the bridge broadcast if it is enabled
     led_set(LED_SEARCHING);
     ESP_LOGI(TAG, "config mode off, radio link resumed");
 }

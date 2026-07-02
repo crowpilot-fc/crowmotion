@@ -285,6 +285,13 @@
         <div class="lrow"><span class="ks">Enabled</span><button class="tg" id="tgTiltEn" onclick="tog('tilt_en')"><span></span></button></div>
         <div class="lrow"><span class="ks">Invert</span><button class="tg" id="tgTiltInv" onclick="togInv('tilt_inv')"><span></span></button></div>
       </div>
+      <div class="lrow" style="margin-top:14px;border-top:1px solid #f1f1f3;padding-top:12px">
+        <span class="k">CrowLink bridge</span>
+        <button class="tg" id="tgBridge" onclick="tog('bridge_en')"><span></span></button>
+      </div>
+      <div class="help">Broadcasts all 8 channels over ESP-NOW to a CrowLink
+        receiver plugged into any radio's trainer jack. Runs alongside
+        Bluetooth.</div>
     </section>
 
     <!-- RESPONSE -->
@@ -499,6 +506,7 @@ function renderControls(){
   const c = cfg;
   setTg("tgPanEn", !!c.pan_en); setTg("tgTiltEn", !!c.tilt_en);
   setTg("tgPanInv", c.pan_inv < 0); setTg("tgTiltInv", c.tilt_inv < 0);
+  setTg("tgBridge", !!c.bridge_en);
   if (document.activeElement !== $("panCh")) $("panCh").value = c.pan_ch;
   if (document.activeElement !== $("tiltCh")) $("tiltCh").value = c.tilt_ch;
   document.querySelectorAll(".slider").forEach(renderSlider);
