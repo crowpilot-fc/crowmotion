@@ -2,6 +2,7 @@
 
 A wireless FPV head tracker you can build for about **$5**.
 
+![Build](https://github.com/crowpilot-fc/crowmotion/actions/workflows/build.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 ![Board](https://img.shields.io/badge/board-ESP32--C3-green)
@@ -20,8 +21,8 @@ bank (a printable case is coming later).
 
 ## Why
 
-Commercial head trackers and IMU-equipped dev boards (XIAO nRF52840 Sense,
-Arduino Nano 33 BLE Sense) cost many times more. CrowMotion does the same job with
+Commercial head trackers and the IMU-equipped dev boards other DIY trackers
+need cost many times more. CrowMotion does the same job with
 a $2 microcontroller and a $2 IMU. No proprietary dongle, no soldering iron
 required beyond four wires.
 
@@ -55,6 +56,11 @@ The head tracker itself:
 | 3D printed case | enclosure (coming later) | filament |
 | USB-C power | any power bank or USB port | reuse |
 | **Head tracker total** | | **~$5** |
+
+The $5 covers the two core parts. Header pins, four short wires, filament, and
+shipping are extra, and the USB power is assumed reused. To our knowledge this
+is still the cheapest wireless head tracker you can build; the nearest DIY
+alternatives start at a ~$16 board before anything else.
 
 To complete the camera side on your aircraft:
 
@@ -124,6 +130,11 @@ goggles, and connect your radio to it as a PARA wireless (Bluetooth) trainer.
 It advertises as "CrowMotion". The onboard LED and a couple of tap gestures are
 the whole physical interface, there are no buttons.
 
+Mounting: the default orientation assumes a temple mount (board flat against
+the side of your goggles, USB-C to the rear). Mounted any other way, open the
+config UI, go to Orientation, and press Auto-detect while holding the tracker
+in its worn position; it works out the mounting from gravity.
+
 ### Onboard status LED
 
 The onboard LED (GPIO8) shows what the tracker is doing at a glance:
@@ -157,7 +168,8 @@ served by a self-contained web UI on the device. No app and no internet needed.
 1. With the radio disconnected, **quad-tap** the tracker. The LED starts its
    double-blink pattern.
 2. Join the WiFi network **`crowmotion-XXXX`** (XXXX is the last four hex digits
-   of the device MAC). The password is **`crowmotion`**.
+   of the device MAC). The password is **`crowmotion`** by default; change it
+   in the Device section of the UI.
 3. Open **`http://192.168.4.1/`** in a browser.
 
 The web UI has these sections:
@@ -187,6 +199,25 @@ You can update the firmware without a cable, from the same web UI:
 - **Over the internet:** enter your home WiFi credentials once, then
   "Check for updates". The device connects out, compares against the published
   version, and installs a newer build if one is available.
+
+## Troubleshooting
+
+- **LED blinks twice, pause, repeats:** the IMU was not found. Check the four
+  wires (VCC to 3V3, GND to GND, SDA to GPIO4/D2, SCL to GPIO3/D1) and that
+  AD0 is tied to GND, then reset.
+- **Radio does not find CrowMotion:** the LED must show the slow heartbeat
+  (advertising). If it is solid, something is already connected. Power-cycle
+  the tracker and scan again from the radio's wireless trainer screen.
+- **Camera moves the wrong way:** flip the Invert toggle for that axis in the
+  Channels section.
+- **View slowly drifts:** double-tap to recenter. Some slow yaw drift is
+  inherent to a magnetometer-free tracker; the auto-calibration removes most
+  of it whenever the tracker is still.
+- **Taps not registering:** lower the Tap intensity slider (Taps section) and
+  tap the case crisply rather than pressing it.
+- **Cannot reach `http://192.168.4.1/`:** confirm you joined the
+  `crowmotion-XXXX` network and the LED shows the double-blink pattern.
+  Quad-tap only opens the hotspot while the radio is disconnected.
 
 ## Enclosure
 
