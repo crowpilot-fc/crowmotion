@@ -25,6 +25,13 @@ summary::-webkit-details-marker { display: none; }
 .hv4:hover{background:#fafafa}
 .hv5:hover{color:#0b0b0c}
 .hv6:hover{background:#f4f4f6;color:#0b0b0c}
+#bom-a, #bom-b { position: absolute; opacity: 0; pointer-events: none; }
+#bom-table-b, #bom-note-b { display: none; }
+#bom-b:checked ~ #bom-table-a { display: none; }
+#bom-b:checked ~ #bom-table-b { display: block; }
+#bom-b:checked ~ #bom-note-b { display: block; }
+#bom-a:checked ~ .bom-opts label[for="bom-a"], #bom-b:checked ~ .bom-opts label[for="bom-b"] { border-color: #e5383b !important; }
+#bom-a:checked ~ .bom-opts label[for="bom-a"] .bom-dot, #bom-b:checked ~ .bom-opts label[for="bom-b"] .bom-dot { background: #e5383b; border-color: #e5383b; }
 </style>
 <script type="module" src="./vendor/esp-web-tools/web/install-button.js"></script>
 </head>
@@ -122,7 +129,7 @@ summary::-webkit-details-marker { display: none; }
   <!-- COMPATIBLE RADIOS -->
   <section style="padding:0 0 64px">
     <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:14px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Does it work with my radio?</div>
-    <p style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#3a3b3e;max-width:64ch;text-wrap:pretty">The $5 (&#8377;500) build works with radios that have the FrSky Bluetooth (PARA) trainer. Any other radio works too, with CrowLink.</p>
+    <p style="margin:0 0 20px;font-size:15.5px;line-height:1.6;color:#3a3b3e;max-width:64ch;text-wrap:pretty">The $5 (&#8377;500) build works with radios that have the FrSky Bluetooth (PARA) trainer. Any other radio works too, with CrowLink. <a href="#build" style="color:#e5383b;font-weight:600;text-decoration:none">See exactly what to buy</a></p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:stretch">
       <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:14px">
         <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Direct over Bluetooth - about <span style="font-family:ui-monospace,Menlo,monospace">$5 (&#8377;500)</span></h3>
@@ -203,9 +210,22 @@ summary::-webkit-details-marker { display: none; }
       <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">Two parts, four wires, one afternoon.</h2>
     </div>
 
-    <!-- BOM -->
-    <div>
-      <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+    <!-- BOM CALCULATOR -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">What do you need to buy? Pick your radio.</h3>
+      <input type="radio" name="bom-radio" id="bom-a" checked>
+      <input type="radio" name="bom-radio" id="bom-b">
+      <div class="bom-opts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+        <label for="bom-a" style="cursor:pointer;background:#ffffff;border:1.5px solid #dcdce0;border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.03)">
+          <span style="display:flex;align-items:center;gap:10px"><span class="bom-dot" style="width:9px;height:9px;border-radius:50%;border:1.5px solid #d3d3d8;box-sizing:border-box;flex:none"></span><span style="font-size:15px;font-weight:700;color:#0b0b0c">My radio has the FrSky Bluetooth trainer</span></span>
+          <span style="font-size:12.5px;line-height:1.5;color:#7c7e85">Tandem X20 / X20S / X20 Pro / X18 / XE, X-Lite Pro, X9D Plus 2019, Horus X10 or QX7 with the BT module</span>
+        </label>
+        <label for="bom-b" style="cursor:pointer;background:#ffffff;border:1.5px solid #dcdce0;border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.03)">
+          <span style="display:flex;align-items:center;gap:10px"><span class="bom-dot" style="width:9px;height:9px;border-radius:50%;border:1.5px solid #d3d3d8;box-sizing:border-box;flex:none"></span><span style="font-size:15px;font-weight:700;color:#0b0b0c">Any other radio</span></span>
+          <span style="font-size:12.5px;line-height:1.5;color:#7c7e85">If it has a trainer port (it looks like a headphone jack), it works - RadioMaster, Jumper, Flysky, any EdgeTX radio.</span>
+        </label>
+      </div>
+      <div id="bom-table-a" style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
           <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">ESP32-C3 Super Mini</span><span style="font-size:12.5px;color:#7c7e85">microcontroller + Bluetooth</span></div>
           <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$2-3 (&#8377;200-300)</span>
@@ -227,7 +247,49 @@ summary::-webkit-details-marker { display: none; }
           <span style="font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:700;color:#e5383b;font-variant-numeric:tabular-nums;white-space:nowrap">~$5 (&#8377;500)</span>
         </div>
       </div>
-      <p style="margin:10px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Headers, wires, filament, and shipping are extra. $5 (&#8377;500) with a Bluetooth-trainer radio; other radios add the DIY CrowLink. Cheapest wireless head tracker we know of - the nearest DIY alternative starts at a $16 (&#8377;1,500) board.</p>
+      <div id="bom-table-b" style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">ESP32-C3 Super Mini</span><span style="font-size:12.5px;color:#7c7e85">microcontroller + Bluetooth</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$2-3 (&#8377;200-300)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">MPU6500 module</span><span style="font-size:12.5px;color:#7c7e85">6-axis IMU</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$2 (&#8377;200)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">3D printed case</span><span style="font-size:12.5px;color:#7c7e85">coming soon</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;white-space:nowrap">filament</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">USB-C power</span><span style="font-size:12.5px;color:#7c7e85">any power bank</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;white-space:nowrap">reuse</span>
+        </div>
+        <div style="display:flex;align-items:center;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box;background:#fafafa">
+          <span style="font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700">CrowLink dongle parts (DIY, open source)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">ESP32-C6 Super Mini (battery pads)</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$3-4 (&#8377;300-400)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">1S LiPo battery</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$2-3 (&#8377;200-300)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">3.5mm TRS plug</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$1 (&#8377;100)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">3D printed case</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;white-space:nowrap">filament</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;box-sizing:border-box;background:#fafafa">
+          <span style="font-size:14.5px;font-weight:700;color:#0b0b0c">Total</span>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:700;color:#e5383b;font-variant-numeric:tabular-nums;white-space:nowrap">~$13 (&#8377;1,200)</span>
+        </div>
+      </div>
+      <p id="bom-note-b" style="margin:-6px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">The dongle is <a href="/crowlink/" style="color:#e5383b;font-weight:600;text-decoration:none">CrowLink</a> - open source and DIY, same as the tracker.</p>
+      <p style="margin:-6px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Headers, wires, filament, and shipping are extra. Cheapest wireless head tracker we know of - the nearest DIY alternative starts at a $16 (&#8377;1,500) board.</p>
     </div>
 
     <!-- Wiring -->

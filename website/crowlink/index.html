@@ -3,44 +3,301 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- esp-web-tools is vendored same-origin under /crowmotion/vendor (no third-party CDN);
+     connect-src allows the firmware manifest/images on the update host. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://updates.crowpilot.in; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <title>CrowLink - wireless trainer bridge for any radio</title>
-<meta name="description" content="CrowLink is a small dongle that plugs into any radio's 3.5mm trainer jack and connects CrowMotion wirelessly. Full page coming soon.">
+<meta name="description" content="CrowLink is a tiny DIY dongle that plugs into your radio's 3.5mm trainer jack and receives CrowMotion head tracking wirelessly.">
 <link rel="canonical" href="https://crowpilot.in/crowlink/">
+<meta property="og:title" content="CrowLink - wireless trainer bridge for any radio">
+<meta property="og:description" content="A tiny DIY dongle for the 3.5mm trainer jack. It receives CrowMotion head tracking wirelessly, so your radio does not need Bluetooth.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://crowpilot.in/crowlink/">
 <meta name="theme-color" content="#f5f5f7">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='13'%20fill='none'%20stroke='%230b0b0c'%20stroke-width='3'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='4'%20fill='%23e5383b'/%3E%3C/svg%3E">
 <style>
-  body { margin: 0; background: #f5f5f7; color: #0b0b0c;
-    font-family: -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    -webkit-font-smoothing: antialiased; }
-  .wrap { text-align: center; padding: 24px; max-width: 560px; }
-  .mark { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #0b0b0c;
-    display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; }
-  .mark span { width: 9px; height: 9px; border-radius: 50%; background: #e5383b; }
-  h1 { font-family: 'Futura','Avenir Next','Century Gothic',system-ui,sans-serif;
-    font-size: 24px; margin: 0 0 10px; font-weight: 800; }
-  .pill { display: inline-block; border: 1px solid #dcdce0; border-radius: 999px;
-    padding: 5px 13px; font-size: 12px; font-weight: 600; color: #7c7e85;
-    font-family: ui-monospace, Menlo, monospace; margin-bottom: 18px; }
-  p { margin: 0 0 22px; font-size: 15.5px; line-height: 1.6; color: #3a3b3e; }
-  .links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  a.card { display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
-    background: #fff; border: 1px solid #ececef; border-radius: 13px; padding: 12px 20px;
-    color: #0b0b0c; font-weight: 600; font-size: 14.5px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
-  a.card:hover { background: #fafafa; }
-  a.card .dot { width: 7px; height: 7px; border-radius: 50%; background: #e5383b; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: #e9e9eb; color: #0b0b0c; font-family: -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+summary::-webkit-details-marker { display: none; }
+.hv1:hover{background:#ececef;color:#0b0b0c}
+.hv2:hover{background:#f4f4f6}
+.hv3:hover{background:#c62f33}
+.hv4:hover{background:#fafafa}
+.hv5:hover{color:#0b0b0c}
+.hv6:hover{background:#27282c}
 </style>
+<script type="module" src="/crowmotion/vendor/esp-web-tools/web/install-button.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="mark"><span></span></div>
-    <h1>CrowLink</h1>
-    <span class="pill">coming soon</span>
-    <p>CrowLink is a small dongle that plugs into any radio's 3.5mm trainer jack and connects CrowMotion wirelessly, so your radio does not need Bluetooth. The firmware is ready; the build guide and this page are on the way.</p>
-    <div class="links">
-      <a class="card" href="/crowmotion/"><span class="dot"></span>Meet CrowMotion</a>
-      <a class="card" href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener">View source on GitHub</a>
-    </div>
+<header style="position:sticky;top:0;z-index:50;background:rgba(245,245,247,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid #e7e7ea">
+  <div style="max-width:960px;margin:0 auto;padding:0 20px;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <a href="#top" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+      <span style="width:26px;height:26px;border-radius:50%;border:2.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block"></span>
+      </span>
+      <span style="font-family:'Futura','Avenir Next','Century Gothic',system-ui,sans-serif;font-size:18px;letter-spacing:.01em"><span style="font-weight:800;color:#0b0b0c">Crow</span><span style="font-weight:400;color:#3a3b3e">Link</span></span>
+    </a>
+    <nav style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" aria-label="Main">
+      <a href="#why" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Why</a>
+      <a href="#how" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">How it works</a>
+      <a href="#build" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Build</a>
+      <a href="#flash" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Flash</a>
+      <a href="#setup" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Set up</a>
+      <a href="#faq" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">FAQ</a>
+      <a href="/crowmotion/" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:9px 16px;border-radius:13px;margin-left:6px;white-space:nowrap" class="hv2">CrowMotion</a>
+    </nav>
   </div>
+</header>
+
+<main id="top" style="background:#f5f5f7">
+<div style="max-width:960px;margin:0 auto;padding:0 20px">
+
+  <!-- HERO -->
+  <section style="padding:72px 0 64px;display:flex;gap:48px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1 1 380px;min-width:300px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Wireless trainer bridge</div>
+      <h1 style="margin:0;font-size:clamp(34px,5vw,50px);line-height:1.08;font-weight:800;letter-spacing:-.02em;color:#0b0b0c;text-wrap:balance">Make any radio work with CrowMotion.</h1>
+      <p style="margin:0;font-size:17px;line-height:1.6;color:#3a3b3e;max-width:52ch;text-wrap:pretty">CrowLink is a tiny dongle that plugs into your radio's 3.5mm trainer jack and receives your head tracking wirelessly. If your radio has no built-in Bluetooth trainer, this is how CrowMotion works with it.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:7px;background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e;font-family:ui-monospace,Menlo,monospace"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>coming soon</span>
+        <span style="background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e">ESP32-C6</span>
+        <span style="background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e">about <span style="font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums">$8 (&#8377;800)</span></span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        <a href="#how" style="text-decoration:none;background:#0b0b0c;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px;white-space:nowrap;flex:none" class="hv6">See how it works</a>
+        <a href="/crowmotion/" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px;box-sizing:border-box;white-space:nowrap;flex:none" class="hv2">Get CrowMotion</a>
+      </div>
+    </div>
+    <div style="flex:1 1 340px;min-width:280px">
+      <div role="img" aria-label="Photo placeholder: CrowLink dongle plugged into a radio trainer jack" style="aspect-ratio:4/3;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#9a9ca3;text-align:center">PHOTO: CrowLink dongle plugged into a radio trainer jack</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section id="why" style="padding:24px 0 64px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Why you might need it</div>
+    <p style="margin:0;font-size:15.5px;line-height:1.65;color:#3a3b3e;max-width:70ch;text-wrap:pretty">CrowMotion streams your head movement to your radio as trainer channels. Radios with the FrSky Bluetooth (PARA) trainer receive it directly. Every other radio - RadioMaster, Jumper, Flysky, Futaba, and most EdgeTX radios - has no Bluetooth trainer. CrowLink bridges that gap: it plugs into the 3.5mm trainer jack almost every radio has, and feeds your head tracking in as a standard wired trainer.</p>
+    <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:28px 24px;display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;row-gap:20px">
+      <div style="border:1px solid #ececef;border-radius:13px;background:#fafafa;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:150px;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#0b0b0c">CrowMotion</span>
+        <span style="font-size:12px;color:#7c7e85">on your goggles</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 6px;flex:0 1 auto">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:#e5383b;white-space:nowrap">wireless (ESP-NOW)</span>
+        <span style="width:72px;height:0;border-top:1.5px dashed #c9c9ce;display:block"></span>
+      </div>
+      <div style="border:1px solid #ececef;border-radius:13px;background:#fafafa;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:150px;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#0b0b0c">CrowLink</span>
+        <span style="font-size:12px;color:#7c7e85">on your radio</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 6px;flex:0 1 auto">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:#e5383b">PPM</span>
+        <span style="width:72px;height:0;border-top:1.5px solid #c9c9ce;display:block"></span>
+      </div>
+      <div style="border:1px solid #ececef;border-radius:13px;background:#fafafa;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:150px;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#0b0b0c">Your radio</span>
+        <span style="font-size:12px;color:#7c7e85">3.5mm trainer jack</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" style="padding:24px 0 64px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>How it works</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
+        <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">1</span>
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">Your head, wireless</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">CrowMotion measures your head pan and tilt and streams it over a direct 2.4GHz link. No phone, no pairing dance.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
+        <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">2</span>
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">CrowLink catches it</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">The dongle sits in your radio's trainer jack and receives those channels wirelessly.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
+        <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">3</span>
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">Your radio flies it</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">CrowLink outputs standard 8-channel PPM, so your radio treats it exactly like a wired trainer. Map the channels to your camera gimbal and fly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAFETY -->
+  <section style="padding:24px 0 64px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Safety</div>
+    <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:32px;display:flex;flex-direction:column;gap:20px">
+      <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">You stay in control.</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#e5383b;flex:none"></span><h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Trainer-switch override</h3></div>
+          <p style="margin:0;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Flip your radio's trainer switch and your own sticks take over instantly - the same instructor-override every trainer setup uses.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#e5383b;flex:none"></span><h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Failsafe</h3></div>
+          <p style="margin:0;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">If the link drops, CrowLink centers all channels within a quarter of a second.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPATIBLE RADIOS -->
+  <section style="padding:0 0 64px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:14px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Compatible radios</div>
+    <p style="margin:0 0 14px;font-size:15.5px;line-height:1.65;color:#3a3b3e;max-width:70ch;text-wrap:pretty">If your radio has a 3.5mm trainer or DSC jack, CrowLink works - RadioMaster (TX16S, Boxer, Zorro, Pocket), Jumper, Flysky, FrSky, and essentially any EdgeTX or OpenTX radio. Futaba and Spektrum radios work when they have a 3.5mm trainer or DSC jack; some models need an adapter.</p>
+    <p style="margin:0;font-size:13.5px;line-height:1.6;color:#7c7e85;max-width:70ch;text-wrap:pretty">Already have an FrSky radio with the Bluetooth trainer? You may not need CrowLink - CrowMotion connects to it directly. <a href="/crowmotion/" style="color:#e5383b;font-weight:600">See CrowMotion</a></p>
+  </section>
+
+  <!-- BUILD -->
+  <section id="build" style="padding:24px 0 64px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Build it</div>
+    <div>
+      <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">ESP32-C6 Super Mini (battery pads + USB-C charging)</span><span style="font-size:12.5px;color:#7c7e85">brain + wireless</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$3-4 (&#8377;300-400)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">1S LiPo battery</span><span style="font-size:12.5px;color:#7c7e85">wireless power</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$2-3 (&#8377;200-300)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">3.5mm TRS plug</span><span style="font-size:12.5px;color:#7c7e85">into the trainer jack</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;font-variant-numeric:tabular-nums;white-space:nowrap">$1 (&#8377;100)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column"><span style="font-size:14.5px;font-weight:600;color:#0b0b0c">3D printed case</span><span style="font-size:12.5px;color:#7c7e85">enclosure (coming later)</span></div>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#3a3b3e;white-space:nowrap">filament</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:8px 18px;box-sizing:border-box;background:#fafafa">
+          <span style="font-size:14.5px;font-weight:700;color:#0b0b0c">Total</span>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:700;color:#e5383b;font-variant-numeric:tabular-nums;white-space:nowrap">~$8 (&#8377;800)</span>
+        </div>
+      </div>
+      <p style="margin:10px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Charges over USB-C. Open source, same as CrowMotion. The wiring diagram and full build guide will be published with the bench-tested v1.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div role="img" aria-label="Photo placeholder: CrowLink parts flat-lay" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#9a9ca3;text-align:center">PHOTO: CrowLink parts flat-lay</span>
+      </div>
+      <div role="img" aria-label="Photo placeholder: CrowLink assembled next to a radio" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#9a9ca3;text-align:center">PHOTO: CrowLink assembled next to a radio</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FLASH -->
+  <section id="flash" style="padding:24px 0 64px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Flash it</div>
+    <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:32px;display:flex;flex-direction:column;gap:20px">
+      <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">Flash from this browser</h2>
+      <p style="margin:0;font-size:15.5px;line-height:1.6;color:#3a3b3e;max-width:64ch;text-wrap:pretty">Built your CrowLink? Plug the ESP32-C6 into your computer over USB-C and click Connect - the flasher detects the C6 and installs CrowLink firmware. Works in Chrome and Edge on desktop.</p>
+      <div>
+        <esp-web-install-button manifest="https://updates.crowpilot.in/flash/manifest.json">
+          <button slot="activate" style="background:#e5383b;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;padding:0 24px;border-radius:13px;border:none;cursor:pointer;font-family:inherit" class="hv3">Connect</button>
+          <span slot="unsupported" style="font-size:14px;color:#7c7e85">This browser cannot flash over USB. Use Chrome or Edge on a desktop computer.</span>
+        </esp-web-install-button>
+      </div>
+      <p style="margin:0;font-size:13.5px;line-height:1.6;color:#7c7e85">The firmware is ready today. The bench-tested build guide, wiring, and printed case are coming.</p>
+    </div>
+  </section>
+
+  <!-- SET UP -->
+  <section id="setup" style="padding:24px 0 64px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Set it up</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">1</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Flip one toggle</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">In the CrowMotion config UI, turn on the "CrowLink bridge" toggle. The tracker then broadcasts its channels for CrowLink. No pairing needed.</p>
+        <div role="img" aria-label="Photo placeholder: config UI showing the CrowLink bridge toggle" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: config UI showing the CrowLink bridge toggle</span>
+        </div>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">2</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Plug it in</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">CrowLink goes into your radio's 3.5mm trainer jack. Its LED blinks while it waits for the tracker and turns solid once it is receiving.</p>
+        <div role="img" aria-label="Photo placeholder: CrowLink in the trainer jack, LED solid" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: CrowLink in the trainer jack, LED solid</span>
+        </div>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">3</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Tell your radio</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Set the radio's trainer mode to the wired jack input and map the trainer channels to your camera gimbal, exactly as you would with a trainer cable.</p>
+        <div role="img" aria-label="Photo placeholder: radio trainer menu" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: radio trainer menu</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" style="padding:24px 0 72px;scroll-margin-top:80px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Questions</div>
+    <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Do I need CrowLink?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Only if your radio has no FrSky Bluetooth trainer. With CrowLink, any radio with a trainer jack works with CrowMotion.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Is it wireless?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Your head link is fully wireless. The only wire is the short plug from the dongle into your radio's trainer jack.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Is it safe to fly?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Yes. Your radio's trainer switch is the override, and CrowLink centers all channels within a quarter of a second if the link drops.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">What powers it?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">An onboard 1S LiPo, charged over USB-C.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Which radios?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Anything with a 3.5mm trainer or DSC jack - see Compatible radios, above.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">What is the range?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">The link only needs to cross the distance from your goggles to the radio in your hands. ESP-NOW covers many times that with ease.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Does it add lag?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Channels stream at 50 Hz, and the PPM output is the same signal a wired trainer cable carries, so your radio sees exactly what a wired trainer would send.</p>
+      </details>
+      <details>
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Where do I get one?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">CrowLink is in development. It is open source, so you can build it now, or watch the <a href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener" style="color:#e5383b;font-weight:600">repo</a> for a build guide.</p>
+      </details>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer style="background:#e9e9eb;border-top:1px solid #e7e7ea">
+  <div style="max-width:960px;margin:0 auto;padding:36px 20px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <span style="width:22px;height:22px;border-radius:50%;border:2px solid #0b0b0c;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none">
+        <span style="width:6px;height:6px;border-radius:50%;background:#e5383b;display:block"></span>
+      </span>
+      <nav style="display:flex;gap:20px;flex-wrap:wrap" aria-label="Footer">
+        <a href="/crowmotion/" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">CrowMotion</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">GitHub</a>
+        <a href="https://updates.crowpilot.in" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">Flasher</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion/blob/main/LICENSE" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">License (Apache-2.0)</a>
+      </nav>
+    </div>
+    <p style="margin:0;font-size:12.5px;color:#9a9ca3"><a href="/crowmotion/" style="color:#3a3b3e;font-weight:600;text-decoration:none" class="hv5">CrowMotion</a> and CrowLink are part of the Crowpilot flight controller family.</p>
+  </div>
+</footer>
 </body>
 </html>
