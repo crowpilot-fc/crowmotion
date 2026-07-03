@@ -38,6 +38,7 @@ summary::-webkit-details-marker { display: none; }
       <span style="font-family:'Futura','Avenir Next','Century Gothic',system-ui,sans-serif;font-size:18px;letter-spacing:.01em"><span style="font-weight:800;color:#0b0b0c">Crow</span><span style="font-weight:400;color:#3a3b3e">Motion</span></span>
     </a>
     <nav style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" aria-label="Main">
+      <a href="#radios" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Radios</a>
       <a href="#features" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Features</a>
       <a href="#flash" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Flash</a>
       <a href="#build" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Build</a>
@@ -57,7 +58,7 @@ summary::-webkit-details-marker { display: none; }
     <div style="flex:1 1 380px;min-width:300px;display:flex;flex-direction:column;gap:18px">
       <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Open-source FPV head tracker</div>
       <h1 style="margin:0;font-size:clamp(34px,5vw,50px);line-height:1.08;font-weight:800;letter-spacing:-.02em;color:#0b0b0c;text-wrap:balance">Turn your head. The camera follows.</h1>
-      <p style="margin:0;font-size:17px;line-height:1.6;color:#3a3b3e;max-width:52ch;text-wrap:pretty">A wireless FPV head tracker you can build for about 5 dollars. Turn your head, your camera follows - and it works with almost any radio.</p>
+      <p style="margin:0;font-size:17px;line-height:1.6;color:#3a3b3e;max-width:52ch;text-wrap:pretty">Build it yourself for about 5 dollars: two parts, four wires, one afternoon. It pairs with your radio as a wireless trainer, and radios without Bluetooth just add an 8-dollar dongle.</p>
       <a href="#radios" style="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:#3a3b3e" class="hv6"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Works with almost any radio</a>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <span style="background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e;font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums">v0.1.2</span>
@@ -65,8 +66,8 @@ summary::-webkit-details-marker { display: none; }
         <span style="background:#ffffff;border:1px solid #e7e7ea;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#3a3b3e">ESP32-C3</span>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
-        <a href="#flash" style="text-decoration:none;background:#e5383b;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px" class="hv3">Flash it now</a>
-        <a href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px;box-sizing:border-box" class="hv2">View on GitHub</a>
+        <a href="#build" style="text-decoration:none;background:#e5383b;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px" class="hv3">Build one</a>
+        <a href="#flash" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px;box-sizing:border-box" class="hv2">Flash the firmware</a>
       </div>
     </div>
     <div style="flex:1 1 340px;min-width:280px">
@@ -88,7 +89,7 @@ summary::-webkit-details-marker { display: none; }
       <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
         <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">2</span>
         <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">It talks to your radio</h3>
-        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Channels stream over the FrSky PARA Bluetooth trainer link, or over CrowLink to any radio with a trainer jack.</p>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">It connects to your radio as a wireless trainer, over Bluetooth or through the CrowLink dongle.</p>
       </div>
       <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
         <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">3</span>
@@ -102,10 +103,9 @@ summary::-webkit-details-marker { display: none; }
   <section id="radios" style="padding:24px 0 64px;scroll-margin-top:80px">
     <div style="background:#0b0b0c;border-radius:18px;padding:40px;display:flex;gap:40px;align-items:center;flex-wrap:wrap">
       <div style="flex:1 1 380px;min-width:300px;display:flex;flex-direction:column;gap:16px;align-items:flex-start">
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.55);font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Works with any radio</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.55);font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Works with almost any radio</div>
         <h2 style="margin:0;font-size:clamp(26px,3.5vw,34px);font-weight:800;letter-spacing:-.015em;color:#ffffff">No Bluetooth? No problem.</h2>
-        <p style="margin:0;font-size:16px;line-height:1.65;color:rgba(255,255,255,.72);text-wrap:pretty">Your radio does not need Bluetooth. CrowLink is a tiny dongle that plugs into any radio's 3.5mm trainer jack and talks to CrowMotion wirelessly, so a built-in FrSky Bluetooth trainer is no longer required. If your radio has a trainer port, CrowMotion works.</p>
-        <p style="margin:0;font-size:13.5px;line-height:1.6;color:rgba(255,255,255,.5);text-wrap:pretty">CrowMotion streams your head movement to your radio. Radios with the FrSky PARA Bluetooth trainer connect directly; every other radio connects through CrowLink over the trainer jack.</p>
+        <p style="margin:0;font-size:16px;line-height:1.65;color:rgba(255,255,255,.72);text-wrap:pretty">Your radio does not need Bluetooth. CrowLink is a tiny dongle, about 8 dollars, that plugs into the 3.5mm trainer jack and talks to CrowMotion wirelessly. If your radio has a trainer port, CrowMotion works.</p>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px">
           <a href="/crowlink/" style="text-decoration:none;background:#e5383b;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;display:inline-flex;align-items:center;padding:0 24px;border-radius:13px" class="hv3">Meet CrowLink</a>
           <span style="border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 13px;font-size:12px;font-weight:600;color:rgba(255,255,255,.65);font-family:ui-monospace,Menlo,monospace">coming soon</span>
@@ -132,7 +132,7 @@ summary::-webkit-details-marker { display: none; }
           <div style="display:flex;align-items:center;min-height:44px;padding:8px 16px;border-bottom:1px solid #f1f1f3;font-size:14px;color:#3a3b3e;box-sizing:border-box">FrSky Taranis X9D Plus 2019</div>
           <div style="display:flex;align-items:center;min-height:44px;padding:8px 16px;font-size:14px;color:#3a3b3e;box-sizing:border-box">FrSky Horus X10 / X10S, Taranis QX7 (with the FrSky Bluetooth module)</div>
         </div>
-        <p style="margin:0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Verified on the FrSky X20S (EthOS). The others use the same FrSky PARA Bluetooth trainer and should work - if you have tested one, let us know.</p>
+        <p style="margin:0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Verified on the FrSky X20S (EthOS). The others use the same FrSky PARA Bluetooth trainer and should work - if you have tested one, <a href="https://github.com/crowpilot-fc/crowmotion/discussions" target="_blank" rel="noopener" style="color:#e5383b;font-weight:600">let us know</a>.</p>
       </div>
       <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:14px">
         <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Any other radio - add CrowLink</h3>
@@ -150,12 +150,11 @@ summary::-webkit-details-marker { display: none; }
         <div style="font-family:ui-monospace,Menlo,monospace;font-size:34px;font-weight:700;color:#e5383b;font-variant-numeric:tabular-nums;line-height:1">$5</div>
         <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">About 5 dollars</h3>
         <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">An ESP32-C3 Super Mini and an MPU6500 module. That is the whole tracker.</p>
-        <p style="margin:0;font-size:12px;line-height:1.5;color:#9a9ca3;text-wrap:pretty">$5 with a Bluetooth-trainer radio; other radios add CrowLink.</p>
       </div>
       <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
         <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block;margin-top:6px"></span>
-        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Truly wireless</h3>
-        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Bluetooth to the radio, tap gestures instead of buttons, and a plug-in battery option. Nothing tethers your head.</p>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">No wires to your radio</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">The link to your radio is fully wireless, and tap gestures replace buttons. Power comes from any USB-C power bank; a plug-in battery module is planned.</p>
       </div>
       <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:10px">
         <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block;margin-top:6px"></span>
@@ -185,7 +184,7 @@ summary::-webkit-details-marker { display: none; }
     <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:20px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Flash it</div>
     <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:32px;display:flex;flex-direction:column;gap:20px">
       <h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">Flash from this browser</h2>
-      <p style="margin:0;font-size:15.5px;line-height:1.6;color:#3a3b3e;max-width:64ch;text-wrap:pretty">Plug your board into this computer over USB-C and click Connect. The right firmware is picked automatically: an ESP32-C3 gets CrowMotion, an ESP32-C6 gets CrowLink. Works in Chrome and Edge on desktop.</p>
+      <p style="margin:0;font-size:15.5px;line-height:1.6;color:#3a3b3e;max-width:64ch;text-wrap:pretty">Plug your board into your computer over USB-C and click Connect. The right firmware is picked automatically: an ESP32-C3 gets CrowMotion, an ESP32-C6 gets CrowLink. Works in Chrome and Edge on desktop.</p>
       <div>
         <esp-web-install-button manifest="https://updates.crowpilot.in/flash/manifest.json">
           <button slot="activate" style="background:#e5383b;color:#ffffff;font-size:15px;font-weight:600;min-height:48px;padding:0 24px;border-radius:13px;border:none;cursor:pointer;font-family:inherit" class="hv3">Connect</button>
@@ -252,7 +251,7 @@ summary::-webkit-details-marker { display: none; }
           <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">1</span>
           <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Wire it</h3>
         </div>
-        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Five connections, all on one side of the board.</p>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Four wires plus an address jumper, all on one side of the board.</p>
         <div role="img" aria-label="Photo placeholder: parts flat-lay" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;margin-top:auto">
           <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">PHOTO: parts flat-lay</span>
         </div>
@@ -294,7 +293,7 @@ summary::-webkit-details-marker { display: none; }
       <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#9a9ca3;text-align:center">VIDEO: build walkthrough - coming soon</span>
     </div>
 
-    <p style="margin:0;font-size:13.5px;color:#7c7e85">Building from source instead? See <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">docs/BUILD.md</span> in the repo.</p>
+    <p style="margin:0;font-size:13.5px;color:#7c7e85">Building from source instead? See <a href="https://github.com/crowpilot-fc/crowmotion/blob/main/docs/BUILD.md" target="_blank" rel="noopener" style="color:#e5383b;font-weight:600;text-decoration:none"><span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">docs/BUILD.md</span></a> in the repo.</p>
   </section>
 
   <!-- CONFIGURE -->
@@ -319,7 +318,7 @@ summary::-webkit-details-marker { display: none; }
     <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
       <details style="border-bottom:1px solid #f1f1f3">
         <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Which radios work?</summary>
-        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">FrSky radios with the PARA wireless trainer (developed against an X20S on EthOS) connect directly over Bluetooth. Everything else can use CrowLink through the trainer jack. No FrSky Bluetooth trainer? <a href="/crowlink/" style="color:#e5383b;font-weight:600">CrowLink</a> plugs into any radio's trainer jack.</p>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">FrSky radios with the PARA wireless trainer (developed against an X20S on EthOS) connect directly over Bluetooth. For everything else, <a href="/crowlink/" style="color:#e5383b;font-weight:600">CrowLink</a> plugs into the radio's trainer jack.</p>
       </details>
       <details style="border-bottom:1px solid #f1f1f3">
         <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Has it flown?</summary>
@@ -328,6 +327,14 @@ summary::-webkit-details-marker { display: none; }
       <details style="border-bottom:1px solid #f1f1f3">
         <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Does it drift?</summary>
         <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Yaw drifts slowly on any magnetometer-free tracker. Continuous auto-calibration removes most of it, and a double-tap recenters instantly.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">How is it powered?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Over USB-C. Most builders run a short cable to a small power bank in a pocket or clipped to the goggle strap. A plug-in battery module is planned.</p>
+      </details>
+      <details style="border-bottom:1px solid #f1f1f3">
+        <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Is it laggy?</summary>
+        <p style="margin:0;padding:0 18px 18px;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Head motion is fused at 100 Hz on the tracker and streamed to the radio at 50 Hz, the same rate a wired trainer cable delivers.</p>
       </details>
       <details style="border-bottom:1px solid #f1f1f3">
         <summary style="list-style:none;cursor:pointer;min-height:52px;display:flex;align-items:center;padding:14px 18px;font-size:15px;font-weight:600;color:#0b0b0c;box-sizing:border-box" class="hv4">Is my radio's trainer mode safe?</summary>
