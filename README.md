@@ -88,7 +88,7 @@ Search terms that work well: "FPV pan tilt", "2 servo camera gimbal",
 - **MPU6500** IMU over I2C, address 0x68
 - Powered over USB-C (a power bank is fine)
 
-Four wires, all on one side of the board next to 3V3 and GND:
+Four wires plus an AD0-to-GND jumper, all on one side of the board next to 3V3 and GND:
 
 | MPU6500 | C3 Super Mini |
 |---|---|

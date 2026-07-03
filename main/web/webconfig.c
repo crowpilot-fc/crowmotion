@@ -54,6 +54,7 @@ static SemaphoreHandle_t s_toggle_sem;
 static EventGroupHandle_t s_wifi_eg;
 #define GOTIP_BIT BIT0
 static char s_ota_status[72] = "idle";
+static volatile bool s_ota_busy = false;  // one update check/flash at a time
 
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id,
                                void *data)
@@ -152,6 +153,19 @@ static esp_err_t h_root(httpd_req_t *req)
 {
     REQUIRE_AP_CLIENT(req);
     httpd_resp_set_type(req, "text/html");
+    // The config page is fully self-contained (its own inline script + styles,
+    // no external resources). This CSP keeps it that way: nothing off-device
+    // can be loaded, data can only go back to the device, and the page cannot
+    // be framed. 'unsafe-inline' is required because the app is a single inline
+    // script; XSS risk is low as the UI renders only via textContent.
+    httpd_resp_set_hdr(req, "Content-Security-Policy",
+                       "default-src 'self'; "
+                       "script-src 'self' 'unsafe-inline'; "
+                       "style-src 'self' 'unsafe-inline'; "
+                       "img-src 'self' data:; connect-src 'self'; "
+                       "base-uri 'none'; form-action 'none'; "
+                       "frame-ancestors 'none'");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
     httpd_resp_send(req, (const char *)index_html_start,
                     index_html_end - index_html_start);
     return ESP_OK;
@@ -193,7 +207,10 @@ static esp_err_t h_post_config(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "bad body");
         return ESP_FAIL;
     }
-    config_apply_json(buf);
+    if (config_apply_json(buf) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid config");
+        return ESP_FAIL;
+    }
     config_save();
     httpd_resp_sendstr(req, "ok");
     return ESP_OK;
@@ -226,8 +243,11 @@ static esp_err_t h_post_exit(httpd_req_t *req)
 // --- OTA ---------------------------------------------------------------------
 
 // Compare dotted "X.Y.Z" versions. Returns <0 if a<b, 0 if equal, >0 if a>b.
-// Missing/garbage components parse to 0, so a malformed server version can
-// never read as newer than a well-formed current version.
+// A component that fails to parse (e.g. "1.x") leaves that field and the ones
+// after it at 0; only the leading integer of each field is read. This is a
+// best-effort compare for the strict-forward OTA gate, not input validation:
+// the manifest is fetched over HTTPS from our own host, so a "version" value
+// is only attacker-controlled if that host is already compromised.
 static int version_cmp(const char *a, const char *b)
 {
     int va[3] = {0, 0, 0}, vb[3] = {0, 0, 0};
@@ -240,14 +260,15 @@ static int version_cmp(const char *a, const char *b)
 }
 
 // Pull update: join home WiFi, fetch the manifest, flash if a newer version.
-static void ota_check_task(void *arg)
+// Returns on any non-flashing exit; the task wrapper clears s_ota_busy.
+static void ota_run(void)
 {
     strcpy(s_ota_status, "connecting to WiFi...");
     EventBits_t b = xEventGroupWaitBits(s_wifi_eg, GOTIP_BIT, false, true,
                                         pdMS_TO_TICKS(20000));
     if (!(b & GOTIP_BIT)) {
         strcpy(s_ota_status, "no internet (check WiFi credentials)");
-        vTaskDelete(NULL);
+        return;
     }
     strcpy(s_ota_status, "checking for updates...");
 
@@ -266,7 +287,7 @@ static void ota_check_task(void *arg)
     esp_http_client_cleanup(cl);
     if (n <= 0) {
         strcpy(s_ota_status, "could not reach update server");
-        vTaskDelete(NULL);
+        return;
     }
     body[n] = '\0';
 
@@ -276,7 +297,7 @@ static void ota_check_task(void *arg)
     if (!cJSON_IsString(ver) || !cJSON_IsString(url)) {
         strcpy(s_ota_status, "bad manifest from server");
         if (j) cJSON_Delete(j);
-        vTaskDelete(NULL);
+        return;
     }
     // Only move strictly forward. Refusing equal-or-older versions makes a
     // compromised or spoofed manifest unable to force a downgrade to an older,
@@ -284,7 +305,7 @@ static void ota_check_task(void *arg)
     if (version_cmp(ver->valuestring, CROWMOTION_VERSION) <= 0) {
         snprintf(s_ota_status, sizeof(s_ota_status), "up to date (%s)", CROWMOTION_VERSION);
         cJSON_Delete(j);
-        vTaskDelete(NULL);
+        return;
     }
     snprintf(s_ota_status, sizeof(s_ota_status), "updating to %s...", ver->valuestring);
     led_set(LED_OTA);
@@ -307,6 +328,12 @@ static void ota_check_task(void *arg)
     } else {
         strcpy(s_ota_status, "update download failed");
     }
+}
+
+static void ota_check_task(void *arg)
+{
+    ota_run();
+    s_ota_busy = false;  // allow another check (unless we already rebooted)
     vTaskDelete(NULL);
 }
 
@@ -317,8 +344,16 @@ static esp_err_t h_post_checkupdate(httpd_req_t *req)
         httpd_resp_sendstr(req, "set home WiFi first");
         return ESP_OK;
     }
+    if (s_ota_busy) {
+        httpd_resp_sendstr(req, "update already in progress");
+        return ESP_OK;
+    }
+    s_ota_busy = true;
     strcpy(s_ota_status, "starting...");
-    xTaskCreate(ota_check_task, "ota", 8192, NULL, 5, NULL);
+    if (xTaskCreate(ota_check_task, "ota", 8192, NULL, 5, NULL) != pdPASS) {
+        s_ota_busy = false;
+        strcpy(s_ota_status, "could not start update task");
+    }
     httpd_resp_sendstr(req, "ok");
     return ESP_OK;
 }
