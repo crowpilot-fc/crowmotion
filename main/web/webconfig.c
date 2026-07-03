@@ -394,11 +394,17 @@ static esp_err_t h_post_update(httpd_req_t *req)
         return ESP_FAIL;
     }
     if (esp_ota_end(ota) != ESP_OK || esp_ota_set_boot_partition(part) != ESP_OK) {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "image invalid");
+        // Signature verification (or image parse) failed: the device keeps its
+        // current firmware and the hotspot stays up, so the client gets this.
+        led_set(LED_CONFIG);  // back to config-mode indication (stop OTA blink)
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                            "firmware rejected: invalid or unsigned image");
         return ESP_FAIL;
     }
+    // Accept: reply first and give the client time to receive it over the slow
+    // hotspot before the reboot drops the connection.
     httpd_resp_sendstr(req, "ok, rebooting");
-    vTaskDelay(pdMS_TO_TICKS(500));
+    vTaskDelay(pdMS_TO_TICKS(1500));
     esp_restart();
     return ESP_OK;
 }

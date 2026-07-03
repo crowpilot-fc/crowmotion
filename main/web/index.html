@@ -54,6 +54,17 @@
   .stage{position:relative;border-radius:14px;border:1px solid #eef0f2;overflow:hidden}
   .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(245,245,247,.72);backdrop-filter:blur(2px)}
   .spinner{width:16px;height:16px;border-radius:999px;border:2px solid #d2d2d8;border-top-color:#0b0b0c;animation:spin .8s linear infinite}
+  /* full-screen overlay for reboot / hotspot-drop moments */
+  .rovl{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(233,233,235,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .rovl.show{display:flex}
+  .rovl .box{background:#fff;border:1px solid #ececef;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.10);padding:26px 22px;max-width:340px;width:100%;text-align:center}
+  .rovl .ring{width:40px;height:40px;margin:0 auto 16px;border-radius:999px;border:3px solid #ededf0;border-top-color:#0b0b0c;animation:spin .9s linear infinite}
+  .rovl .ring.ok{border-color:#d7ecdb;border-top-color:#2a9d4a;animation:none;position:relative}
+  .rovl .ring.err{border-color:#f6d5d6;border-top-color:#e5383b;animation:none}
+  .rovl .ring.ok::after{content:"";position:absolute;left:13px;top:7px;width:8px;height:15px;border:solid #2a9d4a;border-width:0 3px 3px 0;transform:rotate(45deg)}
+  .rovl h3{margin:0 0 8px;font-size:18px;font-weight:800;color:#0b0b0c}
+  .rovl p{margin:0;font-size:14px;line-height:1.55;color:#3a3b3e}
+  .rovl .hint{margin-top:14px;font-size:12.5px;color:#9a9ca3}
 
   /* live bars */
   .barhdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
@@ -383,10 +394,17 @@
 
 <div class="toast" id="toast"><span class="ck"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5.2l2.3 2.3L8.5 2.5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span id="toastTxt"></span></div>
 
+<div class="rovl" id="rovl"><div class="box">
+  <div class="ring" id="rovlRing"></div>
+  <h3 id="rovlTitle"></h3>
+  <p id="rovlSub"></p>
+  <div class="hint" id="rovlHint"></div>
+</div></div>
+
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-let cfg = null, wifiPass = "", apPass = "", conn = "connecting", active = "live", cubeBase = "";
+let cfg = null, wifiPass = "", apPass = "", conn = "connecting", active = "live", cubeBase = "", intentionalDrop = false;
 let last = {y:0,p:0,r:0,pan:1500,tilt:1500}, center = null;
 let ws = null, wsFails = 0, otaTimer = null, toastTimer = null;
 const SECTIONS = [["live","Live"],["orient","Orient"],["channels","Channels"],["response","Response"],["taps","Taps"],["firmware","Firmware"],["device","Device"]];
@@ -466,7 +484,9 @@ function renderConn(){
   $("pdotBg").style.background = (conn==="live"||conn==="error") ? "#e5383b" : "#b7b9be";
   $("pdotPulse").style.display = conn==="live" ? "block" : "none";
   $("heroOverlay").style.display = conn==="live" ? "none" : "flex";
-  const showBanner = (conn==="reconnecting" || conn==="error");
+  // Suppress the "Can't reach CrowMotion" alarm when we dropped the hotspot on
+  // purpose (a reboot after an update, or Exit hotspot). The overlay explains it.
+  const showBanner = (conn==="reconnecting" || conn==="error") && !intentionalDrop;
   $("banner").style.display = showBanner ? "flex" : "none";
   if (showBanner){
     const err = conn==="error";
@@ -633,7 +653,30 @@ async function resetCfg(){
   try { await post("/config", JSON.stringify({reset:true})); await loadConfig(); cubeBase=""; showToast("Reset to defaults"); }
   catch(_) { showToast("Reset failed"); }
 }
-function exitHotspot(){ post("/exit"); showToast("Closing hotspot..."); }
+function exitHotspot(){
+  post("/exit").catch(() => {});
+  showReboot("ok", "Hotspot closed",
+    "Your tracker is back on the radio link and ready to use. This hotspot is closing now - that is expected.",
+    "You can close this tab. Quad-tap the tracker any time to open it again.");
+}
+
+// ---- reboot / hotspot-drop overlay ----
+// Shown when an action intentionally reboots the device or closes the hotspot,
+// so the connection dropping reads as expected instead of an error.
+function showReboot(kind, title, sub, hint){
+  $("rovlRing").className = "ring" + (kind==="ok" ? " ok" : "");
+  $("rovlTitle").textContent = title;
+  $("rovlSub").textContent = sub;
+  $("rovlHint").textContent = hint || "";
+  $("rovl").classList.add("show");
+  intentionalDrop = true;   // the WS is about to drop on purpose
+  renderConn();             // hide any alarm banner now
+}
+function hideReboot(){
+  $("rovl").classList.remove("show");
+  intentionalDrop = false;
+  renderConn();
+}
 
 // ---- OTA ----
 function setOta(text, err){
@@ -665,6 +708,11 @@ function pollStatus(){
     const r = classifyStatus(s);
     setOta(r.text, r.err);
     if (r.terminal) clearInterval(otaTimer);
+    if (r.terminal && /reboot/i.test(r.text)){
+      showReboot("ok", "Update installed",
+        "Your tracker downloaded the update and is restarting on the new firmware. This hotspot will close now - that is expected.",
+        "You can close this tab.");
+    }
   }, 1300);
 }
 function classifyStatus(s){
@@ -685,12 +733,33 @@ function classifyStatus(s){
 }
 function onFwFile(e){
   const f = e.target.files[0]; if (!f) return;
-  setOta("Uploading "+f.name+"...", false);
-  fetch("/update", {method:"POST", body:f})
-    .then(r => r.text())
-    .then(t => setOta(t.trim() || "Installed - rebooting", /fail|error/i.test(t)))
-    .catch(() => setOta("Upload failed (device may be rebooting)", true));
   e.target.value = "";
+  showReboot("busy", "Installing firmware",
+    "Uploading " + f.name + " to your tracker. Keep this page open - it can take up to a minute over the hotspot.");
+  fetch("/update", {method:"POST", body:f})
+    .then(async r => {
+      if (r.ok){
+        showReboot("ok", "Update installed",
+          "Your tracker is restarting on the new firmware. This hotspot will close now - that is expected, and you do not need to reconnect unless you want to change settings.",
+          "You can close this tab.");
+      } else {
+        // The device replied with an error and did NOT reboot: it kept its
+        // current firmware and the hotspot is still up, so let the user retry.
+        const t = (await r.text().catch(() => "")).trim();
+        hideReboot();
+        setOta(/reject|invalid|unsigned/i.test(t)
+          ? "Rejected: firmware is not validly signed. Your tracker kept its current version."
+          : (t || "Update failed. Your tracker kept its current version."), true);
+      }
+    })
+    .catch(() => {
+      // The connection dropped after the upload. A rejected image would have
+      // replied instead of dropping, so this almost always means the tracker
+      // is installing and rebooting.
+      showReboot("ok", "Update sent",
+        "The tracker stopped responding, which normally means it is installing and rebooting. This hotspot will close - that is expected. Reconnect after about 10 seconds only if you want to check the version.",
+        "You can close this tab.");
+    });
 }
 
 // ---- nav / scroll spy ----
