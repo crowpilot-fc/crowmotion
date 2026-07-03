@@ -74,17 +74,24 @@ while plugging in (or while pressing RESET), then run flash again.
 ## 5. What you should see
 
 On boot the monitor prints the CrowMotion banner, brings up NimBLE, and advertises
-as "CrowMotion" (PARA service 0xFFF0), streaming 8 centered trainer channels. If
-the MPU6500 is wired, it is detected and the fusion task logs yaw/pitch/roll;
-if not, it logs a wiring hint and keeps the PARA link running. Connect the FrSky
-X20S as a wireless trainer to receive the channels.
+as "CrowMotion" (PARA services 0xFFF0 and 0xFFFA), streaming 8 centered trainer
+channels. If the MPU6500 is wired, it is detected and the fusion task estimates
+the gyro bias and then centers; if not, it logs a wiring hint and keeps the PARA
+link running. Connect the FrSky X20S as a wireless trainer to receive the channels.
 
 ```
-para: Advertising as "CrowMotion" (service 0xFFF0)
+crowmotion: CrowMotion starting (ESP32-C3 Super Mini)
+para: Advertising as "CrowMotion" (services 0xFFF0, 0xFFFA)
 para: PARA link up: 8 channels at 1500 us, advertising as "CrowMotion"
 mpu6500: MPU6500 detected (WHO_AM_I = 0x70)
-fusion: yaw    0.0  pitch   -0.2  roll    0.1
+mpu6500: MPU6500 configured: +/-2g, +/-2000dps, DLPF 41Hz, 200Hz ODR
+fusion: startup gyro bias [dps]  0.00  0.05 -0.02
+fusion: centered; head motion now drives channels
+crowmotion: CrowMotion up. Waiting for radio (X20S) to connect.
 ```
+
+If the IMU is not wired, you instead see a warning from `crowmotion` and the
+LED blinks a two-blink fault code, while the PARA link keeps advertising.
 
 ## Notes
 
