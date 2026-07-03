@@ -49,6 +49,7 @@ summary::-webkit-details-marker { display: none; }
       <a href="#features" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Features</a>
       <a href="#flash" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Flash</a>
       <a href="#build" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Build</a>
+      <a href="#pantilt" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Pan/tilt</a>
       <a href="#configure" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Configure</a>
       <a href="#faq" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">FAQ</a>
       <a href="/crowlink/" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">CrowLink</a>
@@ -101,7 +102,7 @@ summary::-webkit-details-marker { display: none; }
       <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:12px">
         <span style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0b0b0c;font-family:ui-monospace,Menlo,monospace">3</span>
         <h3 style="margin:0;font-size:17px;font-weight:700;color:#0b0b0c">The camera follows</h3>
-        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Your radio forwards the channels, and two servos on the aircraft pan and tilt the FPV camera to match your head.</p>
+        <p style="margin:0;font-size:14.5px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Your radio forwards the channels, and <a href="#pantilt" style="color:#e5383b;font-weight:600;text-decoration:none">two servos</a> on the aircraft pan and tilt the FPV camera to match your head.</p>
       </div>
     </div>
   </section>
@@ -290,6 +291,7 @@ summary::-webkit-details-marker { display: none; }
       </div>
       <p id="bom-note-b" style="margin:-6px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">The dongle is <a href="/crowlink/" style="color:#e5383b;font-weight:600;text-decoration:none">CrowLink</a> - open source and DIY, same as the tracker.</p>
       <p style="margin:-6px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Headers, wires, filament, and shipping are extra. Cheapest wireless head tracker we know of - the nearest DIY alternative starts at a $16 (&#8377;1,500) board.</p>
+      <p style="margin:-10px 2px 0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">On the aircraft you also need two micro servos and a printed pan/tilt mount, if your model does not have one - see <a href="#pantilt" style="color:#e5383b;font-weight:600;text-decoration:none">On the aircraft</a>.</p>
     </div>
 
     <!-- Wiring -->
@@ -356,6 +358,47 @@ summary::-webkit-details-marker { display: none; }
     </div>
 
     <p style="margin:0;font-size:13.5px;color:#7c7e85">Building from source instead? See <a href="https://github.com/crowpilot-fc/crowmotion/blob/main/docs/BUILD.md" target="_blank" rel="noopener" style="color:#e5383b;font-weight:600;text-decoration:none"><span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">docs/BUILD.md</span></a> in the repo.</p>
+  </section>
+
+  <!-- ON THE AIRCRAFT -->
+  <section id="pantilt" style="padding:24px 0 64px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:20px">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:14px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>On the aircraft</div>
+      <h2 style="margin:0 0 14px;font-size:24px;font-weight:800;letter-spacing:-.01em;color:#0b0b0c">Two servos move the camera.</h2>
+      <p style="margin:0;font-size:15.5px;line-height:1.6;color:#3a3b3e;max-width:66ch;text-wrap:pretty">CrowMotion drives whatever your receiver channels are mapped to. On the aircraft that is usually a 3D printed pan/tilt mount holding the FPV camera, driven by two 9g micro servos (SG90 or metal-gear MG90S, about <span style="font-family:ui-monospace,Menlo,monospace;font-size:14.5px">$2 (&#8377;200)</span> each). Nothing here is specific to CrowMotion - any pan/tilt mount that fits your camera works.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div role="img" aria-label="Photo placeholder: featured mount 1" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">FEATURED MOUNT 1</span>
+        </div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Micro cam pan/tilt</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">The classic fixed-wing setup: two SG90s and a 19mm micro FPV cam.</p>
+        <a href="#" style="font-size:13.5px;font-weight:600;color:#e5383b;text-decoration:none;margin-top:auto">Get the STL</a>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div role="img" aria-label="Photo placeholder: featured mount 2" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">FEATURED MOUNT 2</span>
+        </div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Action cam pan/tilt</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">For bigger airframes carrying a GoPro-class camera.</p>
+        <a href="#" style="font-size:13.5px;font-weight:600;color:#e5383b;text-decoration:none;margin-top:auto">Get the STL</a>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div role="img" aria-label="Photo placeholder: featured mount 3" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">FEATURED MOUNT 3</span>
+        </div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Pan-only micro mount</h3>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">One servo, for small wings where tilt is overkill.</p>
+        <a href="#" style="font-size:13.5px;font-weight:600;color:#e5383b;text-decoration:none;margin-top:auto">Get the STL</a>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a href="https://makerworld.com/en/search/models?keyword=fpv%20pan%20tilt" target="_blank" rel="noopener" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:13px" class="hv2">More on MakerWorld</a>
+      <a href="https://www.printables.com/search/models?q=fpv%20pan%20tilt" target="_blank" rel="noopener" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:13px" class="hv2">More on Printables</a>
+      <a href="https://www.thingiverse.com/search?q=fpv+pan+tilt" target="_blank" rel="noopener" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:13px" class="hv2">More on Thingiverse</a>
+    </div>
+    <p style="margin:0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Map pan and tilt to the same trainer channels you chose in the CrowMotion config UI, and center the servos before final assembly.</p>
   </section>
 
   <!-- CONFIGURE -->
