@@ -357,9 +357,11 @@
       <div class="lab">Firmware</div>
       <div class="lrow" style="border-bottom:1px solid #f1f1f3"><span class="k">Version</span><span class="verpill" id="version">-</span></div>
       <div style="margin-top:14px">
-        <div class="help">Home WiFi <i>- for downloading updates</i></div>
-        <input class="field" id="ssid" placeholder="SSID" style="margin-bottom:8px" onchange="setStr('wifi_ssid',this.value)">
+        <div class="help">Home WiFi <i>- lets the tracker download updates, and open this page from your home network</i></div>
+        <input class="field" id="ssid" placeholder="SSID (2.4GHz)" style="margin-bottom:8px" onchange="setStr('wifi_ssid',this.value)">
         <input class="field" id="wpass" type="password" placeholder="password (blank = keep current)" oninput="wifiPass=this.value">
+        <button class="btn ghost sm" style="width:100%;margin-top:10px" onclick="saveWifi()">Save WiFi</button>
+        <div class="help" id="lanHint" style="margin-top:10px;display:none;line-height:1.5"></div>
       </div>
       <div class="row2" style="margin-top:12px">
         <button class="btn dark sm" style="flex:1" onclick="checkUpdate()">Check for updates</button>
@@ -431,6 +433,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("fwFile").addEventListener("change", onFwFile);
   $("impFile").addEventListener("change", onImpFile);
   loadConfig();
+  loadInfo();
   openWS();
 });
 
@@ -535,6 +538,7 @@ function renderControls(){
   $("panMinMk").style.left = usPct(c.pan_min)+"%"; $("panMaxMk").style.left = usPct(c.pan_max)+"%";
   $("tiltMinMk").style.left = usPct(c.tilt_min)+"%"; $("tiltMaxMk").style.left = usPct(c.tilt_max)+"%";
   setVal("ssid", c.wifi_ssid || ""); setVal("name", c.name || "");
+  renderLanHint();
   const ver = c.version ? ("v"+c.version) : "-";
   $("version").textContent = ver; $("footVer").textContent = ver;
   const ax = ["X","Y","Z"];
@@ -658,6 +662,40 @@ function exitHotspot(){
   showReboot("ok", "Hotspot closed",
     "Your tracker is back on the radio link and ready to use. This hotspot is closing now - that is expected.",
     "You can close this tab. Quad-tap the tracker any time to open it again.");
+}
+
+// ---- home WiFi / LAN address ----
+let lanHost = "";
+async function loadInfo(){
+  try { const j = await (await fetch("/info")).json(); lanHost = (j && j.host) || ""; renderLanHint(); }
+  catch(_) {}
+}
+function renderLanHint(){
+  const el = $("lanHint"); if (!el) return;
+  el.textContent = "";
+  if (!lanHost){ el.style.display = "none"; return; }
+  el.style.display = "block";
+  const url = "http://" + lanHost + ".local";
+  if (cfg && cfg.wifi_ssid){
+    el.appendChild(document.createTextNode("On your home network this tracker is at "));
+    const a = document.createElement("a");
+    a.href = url; a.textContent = lanHost + ".local";
+    a.style.color = "#0b0b0c"; a.style.fontWeight = "600";
+    el.appendChild(a);
+    el.appendChild(document.createTextNode(". Switch your phone back to your home WiFi first (this hotspot can't reach it), then tap the link. Works while config mode is open."));
+  } else {
+    el.appendChild(document.createTextNode("Add your home WiFi above and Save, then this tracker is reachable at " + url + " on your network."));
+  }
+}
+async function saveWifi(){
+  const body = {wifi_ssid: cfg.wifi_ssid || ""};
+  if (wifiPass) body.wifi_pass = wifiPass;
+  try {
+    await post("/config", JSON.stringify(body));
+    wifiPass = ""; $("wpass").value = "";
+    showToast(cfg.wifi_ssid ? "Home WiFi saved" : "Home WiFi cleared");
+    renderLanHint();
+  } catch(_) { showToast("Save failed"); }
 }
 
 // ---- reboot / hotspot-drop overlay ----

@@ -1,0 +1,6 @@
+## Managed component dependencies for the CrowMotion tracker app.
+dependencies:
+  # mDNS: advertise the config page as crowmotion-XXXX.local on the local
+  # network while in config mode. Pinned to the exact version built and
+  # hardware-verified (dependencies.lock is gitignored).
+  espressif/mdns: "==2.0.0"

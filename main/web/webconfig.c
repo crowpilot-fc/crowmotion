@@ -20,6 +20,7 @@
 #include "esp_https_ota.h"
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
+#include "mdns.h"
 #include "lwip/sockets.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -55,6 +56,32 @@ static EventGroupHandle_t s_wifi_eg;
 #define GOTIP_BIT BIT0
 static char s_ota_status[72] = "idle";
 static volatile bool s_ota_busy = false;  // one update check/flash at a time
+static char s_mdns_host[24] = "";         // crowmotion-XXXX (mDNS name in config mode)
+
+// Advertise the config page as crowmotion-XXXX.local (XXXX = the same last two
+// MAC bytes as the hotspot SSID, so each tracker is unique on the network).
+static void mdns_start(void)
+{
+    uint8_t mac[6] = {0};
+    esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+    snprintf(s_mdns_host, sizeof(s_mdns_host), "crowmotion-%02x%02x", mac[4], mac[5]);
+    if (mdns_init() != ESP_OK) {
+        s_mdns_host[0] = '\0';
+        return;
+    }
+    mdns_hostname_set(s_mdns_host);
+    mdns_instance_name_set("CrowMotion config");
+    mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
+    ESP_LOGI(TAG, "mDNS: config page also at http://%s.local", s_mdns_host);
+}
+
+static void mdns_stop(void)
+{
+    if (s_mdns_host[0]) {
+        mdns_free();
+        s_mdns_host[0] = '\0';
+    }
+}
 
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id,
                                void *data)
@@ -69,82 +96,46 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id,
 
 // --- HTTP handlers -----------------------------------------------------------
 
-// Allow requests only from clients on the hotspot (AP) subnet. In AP+STA mode
-// the HTTP server also listens on the home-network (STA) interface; config,
-// recenter, and OTA must not be reachable from there.
-static bool client_on_ap(httpd_req_t *req)
-{
-    if (!s_ap_netif) {
-        return false;
-    }
-    int fd = httpd_req_to_sockfd(req);
-    struct sockaddr_in6 sa;
-    socklen_t len = sizeof(sa);
-    if (fd < 0 || getpeername(fd, (struct sockaddr *)&sa, &len) != 0) {
-        return false;
-    }
-    uint32_t peer;
-    if (sa.sin6_family == AF_INET) {
-        peer = ((struct sockaddr_in *)&sa)->sin_addr.s_addr;
-    } else if (sa.sin6_family == AF_INET6) {
-        // Accept only IPv4-mapped IPv6 (::ffff:a.b.c.d); a native IPv6 peer is
-        // not on the IPv4 AP subnet and must not pass by reading its low word.
-        const uint8_t *a = sa.sin6_addr.un.u8_addr;
-        for (int i = 0; i < 10; i++) {
-            if (a[i] != 0) return false;
-        }
-        if (a[10] != 0xff || a[11] != 0xff) {
-            return false;
-        }
-        peer = sa.sin6_addr.un.u32_addr[3];
-    } else {
-        return false;
-    }
-    esp_netif_ip_info_t ip;
-    if (esp_netif_get_ip_info(s_ap_netif, &ip) != ESP_OK) {
-        return false;
-    }
-    return (peer & ip.netmask.addr) == (ip.ip.addr & ip.netmask.addr);
-}
-
-// CSRF guard: a browser attaches an Origin header to cross-site POSTs. If one
-// is present it must be our own AP origin; otherwise a page the victim's phone
-// loaded (while joined to the hotspot) could silently POST /config, /update,
-// or /recenter. Requests with no Origin (the config page's own fetches on some
-// browsers, curl) fall through to the AP-subnet gate as before.
+// The config server runs only in config mode (opened by quad-tap) and only on
+// the device's own local interfaces: the hotspot AP and, if home WiFi is set,
+// the local network (where it is reachable at crowmotion-XXXX.local). By design
+// it is reachable from the home network without a password, so read endpoints
+// are open to any local client.
+//
+// CSRF guard for state-changing endpoints: a browser attaches an Origin header
+// to cross-site POSTs. We accept a request only if it is same-origin (the
+// Origin host matches the Host the request came in on) or has no Origin (curl,
+// same-page GET). This blocks a malicious website from silently reconfiguring
+// or reflashing the tracker via the user's browser, and it works no matter
+// which address (192.168.4.1 or crowmotion-XXXX.local) the page was opened at.
 static bool origin_ok(httpd_req_t *req)
 {
-    size_t n = httpd_req_get_hdr_value_len(req, "Origin");
-    if (n == 0) {
+    size_t on = httpd_req_get_hdr_value_len(req, "Origin");
+    if (on == 0) {
         return true;  // no Origin: not a cross-site browser request
     }
-    char origin[48];
-    if (n >= sizeof(origin)) {
+    char origin[80], host[80];
+    if (on >= sizeof(origin)) {
         return false;
     }
-    if (httpd_req_get_hdr_value_str(req, "Origin", origin, sizeof(origin)) != ESP_OK) {
+    if (httpd_req_get_hdr_value_str(req, "Origin", origin, sizeof(origin)) != ESP_OK ||
+        httpd_req_get_hdr_value_str(req, "Host", host, sizeof(host)) != ESP_OK) {
         return false;
     }
-    return strcmp(origin, "http://192.168.4.1") == 0;
+    const char *oh = strstr(origin, "://");   // strip scheme
+    oh = oh ? oh + 3 : origin;
+    return strcmp(oh, host) == 0;              // same-origin
 }
 
-// Gate a GET handler on the hotspot subnet. Sends 403 and returns on failure.
-#define REQUIRE_AP_CLIENT(req)                                                \
-    do {                                                                      \
-        if (!client_on_ap(req)) {                                             \
-            httpd_resp_send_err(req, HTTPD_403_FORBIDDEN,                     \
-                                "config is only served on the hotspot");     \
-            return ESP_FAIL;                                                  \
-        }                                                                     \
-    } while (0)
+// Read endpoints: no gate (config-mode-only, local-only).
+#define REQUIRE_AP_CLIENT(req) do { (void)(req); } while (0)
 
-// Gate a state-changing handler on the hotspot subnet AND a same-origin
-// request (CSRF defense). Sends 403 and returns on failure.
+// State-changing endpoints: require a same-origin request (CSRF defense).
 #define REQUIRE_AP_WRITE(req)                                                 \
     do {                                                                      \
-        if (!client_on_ap(req) || !origin_ok(req)) {                          \
+        if (!origin_ok(req)) {                                                \
             httpd_resp_send_err(req, HTTPD_403_FORBIDDEN,                     \
-                                "request refused");                          \
+                                "cross-origin request refused");             \
             return ESP_FAIL;                                                  \
         }                                                                     \
     } while (0)
@@ -365,6 +356,18 @@ static esp_err_t h_get_status(httpd_req_t *req)
     return ESP_OK;
 }
 
+// This device's local name, so the UI can show the crowmotion-XXXX.local
+// address for reaching config over the home network.
+static esp_err_t h_get_info(httpd_req_t *req)
+{
+    REQUIRE_AP_CLIENT(req);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "{\"host\":\"%s\"}", s_mdns_host);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, buf);
+    return ESP_OK;
+}
+
 // Local update: the page POSTs a firmware .bin as the body; flash it.
 static esp_err_t h_post_update(httpd_req_t *req)
 {
@@ -451,6 +454,7 @@ static void httpd_start_all(void)
         {.uri = "/exit", .method = HTTP_POST, .handler = h_post_exit},
         {.uri = "/checkupdate", .method = HTTP_POST, .handler = h_post_checkupdate},
         {.uri = "/status", .method = HTTP_GET, .handler = h_get_status},
+        {.uri = "/info", .method = HTTP_GET, .handler = h_get_info},
         {.uri = "/update", .method = HTTP_POST, .handler = h_post_update},
         {.uri = "/ws", .method = HTTP_GET, .handler = h_ws, .is_websocket = true},
     };
@@ -551,6 +555,7 @@ static void enter_config(void)
     crowlink_tx_pause();  // release the WiFi radio before the hotspot claims it
     wifi_ap_start();
     httpd_start_all();
+    mdns_start();  // crowmotion-XXXX.local for LAN access to the config page
     s_active = true;
     led_set(LED_CONFIG);
 }
@@ -563,6 +568,7 @@ static void exit_config(void)
         s_server = NULL;
     }
     s_ws_fd = -1;
+    mdns_stop();
     wifi_ap_stop();
     para_ble_resume();
     crowlink_tx_resume();  // re-arm the bridge broadcast if it is enabled

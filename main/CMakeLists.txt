@@ -26,6 +26,7 @@ idf_component_register(
         "web/index.html"
     PRIV_REQUIRES
         crowlink
+        mdns
         bt
         nvs_flash
         esp_driver_i2c
