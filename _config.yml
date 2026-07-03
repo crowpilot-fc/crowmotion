@@ -1,7 +1,0 @@
-# GitHub Pages configuration.
-# Serves README.md as the landing page with the Cayman theme.
-# Enable in repo Settings -> Pages -> Source: main branch, / (root).
-title: CrowMotion
-description: A wireless FPV head tracker you can build for about $5
-theme: jekyll-theme-cayman
-show_downloads: false
