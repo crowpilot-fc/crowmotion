@@ -52,6 +52,21 @@ jobs:
             exit 1
           fi
 
+      - name: Sign-enable the tracker build (M13)
+        env:
+          OTA_SIGNING_KEY_B64: ${{ secrets.OTA_SIGNING_KEY_B64 }}
+        run: |
+          if [ -z "$OTA_SIGNING_KEY_B64" ]; then
+            echo "::error::OTA_SIGNING_KEY_B64 secret is missing; cannot sign the release"; exit 1
+          fi
+          echo "$OTA_SIGNING_KEY_B64" | base64 -d > ota_signing_key.pem
+          # Layer the CI-only signing overlay onto the shared defaults so the
+          # tracker build produces an RSA-3072 signed image. Local/dev builds do
+          # not run this, so they stay unsigned and need no key. Only affects the
+          # root (tracker) project; the bridge uses its own bridge/sdkconfig.
+          cat sdkconfig.ci.signed >> sdkconfig.defaults
+          echo "signing enabled for the tracker build"
+
       - name: Build tracker (esp32c3)
         uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
         with:
@@ -69,6 +84,15 @@ jobs:
         run: |
           VER="${TAG#v}"
           pip install --quiet "esptool==4.8.1"
+
+          # Fail the release unless the tracker image is actually signed with
+          # our key (guards against a misbuild shipping an unverifiable image
+          # that would then reject every future OTA on 0.1.3+ devices).
+          espsecure.py verify_signature --version 2 --keyfile ota_signing_key.pem \
+            build/crowmotion.bin | tee /tmp/verify.txt
+          grep -q "verification successful" /tmp/verify.txt \
+            || { echo "::error::tracker image is not validly signed"; exit 1; }
+          rm -f ota_signing_key.pem
 
           mkdir -p site/flash site/crowmotion
           # Copy the whole flasher (index.html + vendored esp-web-tools);

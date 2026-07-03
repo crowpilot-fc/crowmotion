@@ -22,3 +22,8 @@ __pycache__/
 
 # Wrangler CLI cache
 .wrangler/
+
+# OTA signing: never commit the private key (CI decodes it from a secret).
+ota_signing_key.pem
+*_signing_key.pem
+crowmotion-keys/

@@ -1,0 +1,16 @@
+# CI-ONLY overlay that signs the tracker app for release (M13).
+#
+# This is deliberately NOT in sdkconfig.defaults: local and contributor builds
+# stay unsigned and buildable with no key. The release workflow layers this on
+# top (SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.signed") and writes
+# the private key to ota_signing_key.pem from the OTA_SIGNING_KEY_B64 secret.
+#
+# Scheme: RSA-3072 (Secure Boot V2 signature format) - the one app-signing
+# scheme supported across every Crow board (C3, S3, C6, H2). No hardware secure
+# boot is enabled: no eFuses burned, boards stay USB-recoverable; only the OTA
+# path verifies signatures. The public key is carried in the app's signature
+# block and used to verify the next OTA image.
+CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT=y
+CONFIG_SECURE_SIGNED_ON_UPDATE_NO_SECURE_BOOT=y
+CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES=y
+CONFIG_SECURE_BOOT_SIGNING_KEY="ota_signing_key.pem"
