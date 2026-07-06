@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>CrowMotion setup guide - from parts to first flight</title>
+<meta name="description" content="Step-by-step setup for the CrowMotion head tracker: configure the tracker, connect your radio, mix the trainer channels, and wire two servos to a pan/tilt camera mount.">
+<link rel="canonical" href="https://crowpilot.in/crowmotion/guide/">
+<meta property="og:title" content="CrowMotion setup guide - from parts to first flight">
+<meta property="og:description" content="Configure the tracker, connect your radio, mix the trainer channels, and wire two servos to a pan/tilt camera mount.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://crowpilot.in/crowmotion/guide/">
+<meta name="theme-color" content="#f5f5f7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='13'%20fill='none'%20stroke='%230b0b0c'%20stroke-width='3'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='4'%20fill='%23e5383b'/%3E%3C/svg%3E">
+<style>
+html { scroll-behavior: smooth; }
+body { margin: 0; background: #e9e9eb; color: #0b0b0c; font-family: -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+.hv1:hover{background:#ececef;color:#0b0b0c}
+.hv2:hover{background:#f4f4f6}
+.hv5:hover{color:#0b0b0c}
+</style>
+</head>
+<body>
+<header style="position:sticky;top:0;z-index:50;background:rgba(245,245,247,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid #e7e7ea">
+  <div style="max-width:960px;margin:0 auto;padding:0 20px;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <a href="/crowmotion/" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+      <span style="width:26px;height:26px;border-radius:50%;border:2.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none">
+        <span style="width:7px;height:7px;border-radius:50%;background:#e5383b;display:block"></span>
+      </span>
+      <span style="font-family:'Futura','Avenir Next','Century Gothic',system-ui,sans-serif;font-size:18px;letter-spacing:.01em"><span style="font-weight:800;color:#0b0b0c">Crow</span><span style="font-weight:400;color:#3a3b3e">Motion</span></span>
+    </a>
+    <nav style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" aria-label="Main">
+      <a href="#overview" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Overview</a>
+      <a href="#tracker" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Tracker</a>
+      <a href="#radio" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Radio</a>
+      <a href="#mixer" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Mixer</a>
+      <a href="#aircraft" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Aircraft</a>
+      <a href="#preflight" style="text-decoration:none;color:#3a3b3e;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:9px" class="hv1">Preflight</a>
+      <a href="/crowmotion/" style="text-decoration:none;background:#ffffff;border:1px solid #dcdce0;color:#0b0b0c;font-size:13.5px;font-weight:600;padding:9px 16px;border-radius:13px;margin-left:6px;white-space:nowrap" class="hv2">Product page</a>
+    </nav>
+  </div>
+</header>
+
+<main style="background:#f5f5f7">
+<div style="max-width:960px;margin:0 auto;padding:0 20px">
+
+  <!-- INTRO -->
+  <section style="padding:64px 0 48px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700;margin-bottom:14px"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>Setup guide</div>
+    <h1 style="margin:0 0 14px;font-size:clamp(30px,4.5vw,42px);line-height:1.1;font-weight:800;letter-spacing:-.02em;color:#0b0b0c;text-wrap:balance">From parts to first flight.</h1>
+    <p style="margin:0;font-size:16px;line-height:1.65;color:#3a3b3e;max-width:66ch;text-wrap:pretty">This guide takes a built CrowMotion tracker all the way to a camera that follows your head: configure the tracker, connect your radio, mix the trainer channels, and plug in the two servos. It covers firmware v0.1.2.</p>
+  </section>
+
+  <!-- OVERVIEW -->
+  <section id="overview" style="padding:0 0 56px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>1. How it all fits together</div>
+    <p style="margin:0;font-size:15.5px;line-height:1.65;color:#3a3b3e;max-width:70ch;text-wrap:pretty">Your head becomes two trainer channels: pan streams on TR1 and tilt on TR2 (both changeable in the config UI). Everything after the radio is ordinary RC plumbing - you mix the trainer channels onto two output channels, and the servos plug into those receiver slots.</p>
+    <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:28px 24px;display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;row-gap:20px">
+      <div style="border:1px solid #ececef;border-radius:13px;background:#fafafa;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:130px;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#0b0b0c">CrowMotion</span>
+        <span style="font-size:12px;color:#7c7e85">on your goggles</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 6px;flex:0 1 auto">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:#e5383b;white-space:nowrap">Bluetooth or CrowLink</span>
+        <span style="width:60px;height:0;border-top:1.5px dashed #c9c9ce;display:block"></span>
+      </div>
+      <div style="border:1px solid #ececef;border-radius:13px;background:#fafafa;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:130px;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#0b0b0c">Your radio</span>
+        <span style="font-size:12px;color:#7c7e85">trainer + mixer</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 6px;flex:0 1 auto">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:#e5383b;white-space:nowrap">your RC link</span>
+        <span style="width:60px;height:0;border-top:1.5px dashed #c9c9ce;display:block"></span>
+      </div>
+      <div style="border:1px solid #ececef;border-radius:13px;background:#fafafa;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:130px;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#0b0b0c">Receiver</span>
+        <span style="font-size:12px;color:#7c7e85">on the aircraft</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:0 6px;flex:0 1 auto">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:#e5383b">PWM</span>
+        <span style="width:60px;height:0;border-top:1.5px solid #c9c9ce;display:block"></span>
+      </div>
+      <div style="border:1px solid #ececef;border-radius:13px;background:#fafafa;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:130px;text-align:center">
+        <span style="font-size:14px;font-weight:700;color:#0b0b0c">Two servos</span>
+        <span style="font-size:12px;color:#7c7e85">pan/tilt mount</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PARTS + BUILD -->
+  <section style="padding:0 0 56px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>2. What you need, built and flashed</div>
+    <p style="margin:0;font-size:15.5px;line-height:1.65;color:#3a3b3e;max-width:70ch;text-wrap:pretty">This guide starts where the product page ends. If you have not yet: the <a href="/crowmotion/#build" style="color:#e5383b;font-weight:600;text-decoration:none">parts list and wiring</a> (pick your radio in the calculator to see exactly what to buy), the <a href="/crowmotion/#flash" style="color:#e5383b;font-weight:600;text-decoration:none">browser flasher</a>, and the <a href="/crowmotion/#pantilt" style="color:#e5383b;font-weight:600;text-decoration:none">pan/tilt mounts and servos</a> for the aircraft side. Come back here with a flashed tracker.</p>
+  </section>
+
+  <!-- TRACKER -->
+  <section id="tracker" style="padding:0 0 56px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>3. Configure the tracker</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">1</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Open the config hotspot</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">With the radio disconnected, tap the tracker four times. Join the WiFi network <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">crowmotion-XXXX</span> (default password <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">crowmotion</span>) and open <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">192.168.4.1</span>.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">2</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Teach it its mounting</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Mount the tracker on your goggles first, then run Auto-detect in the Orientation tab while wearing them level. Any mounting position works - the tracker learns which way is up.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">3</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Note your channels</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">In the Channels tab, pan defaults to <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">TR1</span> and tilt to <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">TR2</span>. Leave them unless they clash with another trainer setup. Watch the Live tab to confirm the 3D head follows you.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">4</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Close the hotspot</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Quad-tap again to close config mode. Bluetooth is paused while the hotspot is open, so the radio can only connect after this step. The LED returns to a slow heartbeat: that means advertising, ready to pair.</p>
+      </div>
+    </div>
+    <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+      <div style="display:flex;align-items:center;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box;background:#fafafa">
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700">LED cheat sheet</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">Slow heartbeat</span><span style="color:#3a3b3e">advertising, waiting for the radio</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">Solid</span><span style="color:#3a3b3e">radio connected</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">Double-blink</span><span style="color:#3a3b3e">config hotspot open</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">Fast blink</span><span style="color:#3a3b3e">firmware update in progress</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 18px;font-size:13.5px;box-sizing:border-box"><span style="color:#0b0b0c;font-weight:600">Repeating 2 blinks</span><span style="color:#3a3b3e">IMU not found - check the four wires</span></div>
+    </div>
+  </section>
+
+  <!-- RADIO -->
+  <section id="radio" style="padding:0 0 56px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>4. Connect your radio</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:stretch">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:14px">
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Path A - FrSky Bluetooth trainer</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">On EthOS radios (developed against the X20S), the Bluetooth trainer lives in the radio's Bluetooth settings: enable trainer mode and pick the <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">crowmotion-XXXX</span> device. The tracker's LED goes solid when connected, and the radio's trainer inputs start moving with your head.</p>
+        <div role="img" aria-label="Screenshot placeholder: EthOS Bluetooth trainer discovery" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">SCREENSHOT: EthOS Bluetooth trainer discovery</span>
+        </div>
+        <p style="margin:0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Exact menu names and screenshots for EthOS are being verified on the X20S and will land here.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:24px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Path B - any radio via CrowLink</h3>
+          <span style="border:1px solid #dcdce0;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;color:#7c7e85;font-family:ui-monospace,Menlo,monospace">pending bench test</span>
+        </div>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#3a3b3e;text-wrap:pretty">Turn on the "CrowLink bridge" toggle in the CrowMotion config UI, plug <a href="/crowlink/" style="color:#e5383b;font-weight:600;text-decoration:none">CrowLink</a> into the radio's 3.5mm trainer jack, and set the radio's trainer mode to the wired jack input (EdgeTX: Trainer mode "Master/Jack"). CrowLink's LED turns solid once it is receiving the tracker.</p>
+        <div role="img" aria-label="Screenshot placeholder: EdgeTX trainer mode set to Master/Jack" style="aspect-ratio:16/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">SCREENSHOT: EdgeTX trainer mode, Master/Jack</span>
+        </div>
+        <p style="margin:0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Steps will be finalized when CrowLink v1 hardware is bench-tested.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MIXER -->
+  <section id="mixer" style="padding:0 0 56px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>5. Mix the trainer channels</div>
+    <p style="margin:0;font-size:15.5px;line-height:1.65;color:#3a3b3e;max-width:70ch;text-wrap:pretty">This is the step most first-time setups get stuck on. The trainer inputs (TR1, TR2) do nothing until your model's mixer routes them to output channels. Pick two channels your model does not use for flying - CH6 and CH7 are typical on a simple fixed wing.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">1</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">TR1 to a free channel</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">In the model's mixer, add a mix on CH6 with source <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">TR1</span> (pan). Full weight, no expo.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">2</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">TR2 to the next one</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Same again on CH7 with source <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px">TR2</span> (tilt).</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">3</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Put it on a switch</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Gate both mixes with a spare switch so you can turn head control on and off in flight. Off should hold the camera at center.</p>
+      </div>
+    </div>
+    <div role="img" aria-label="Screenshot placeholder: mixer with TR1 on CH6 and TR2 on CH7" style="aspect-ratio:21/9;border:1.5px dashed #d3d3d8;border-radius:14px;background:#fafafa;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9a9ca3;text-align:center">SCREENSHOT: mixer page, TR1 on CH6 and TR2 on CH7</span>
+    </div>
+    <p style="margin:0;font-size:12.5px;line-height:1.55;color:#9a9ca3;text-wrap:pretty">Menu wording differs between EthOS and EdgeTX, but the shape is the same everywhere: trainer input as a mix source on a free output channel.</p>
+  </section>
+
+  <!-- AIRCRAFT -->
+  <section id="aircraft" style="padding:0 0 56px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>6. The aircraft side</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">1</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Plug in the servos</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Pan servo into the receiver slot for CH6, tilt servo into CH7 - the same channels you mixed. Make sure your receiver or BEC can feed two extra 9g servos.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">2</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Center before assembly</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Power everything up, look straight ahead, double-tap to recenter, and only then fit the servo horns and camera so the mount points forward at center.</p>
+      </div>
+      <div style="background:#ffffff;border:1px solid #ececef;border-radius:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #0b0b0c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;flex:none">3</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#0b0b0c">Check the directions</h3>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a3b3e;text-wrap:pretty">Look left - the camera should look left. Look up - camera up. If an axis is reversed, flip Invert for that channel in the config UI's Channels tab. No re-gluing, no mixer surgery.</p>
+      </div>
+    </div>
+    <p style="margin:0;font-size:13.5px;line-height:1.6;color:#7c7e85;max-width:70ch;text-wrap:pretty">Movement too twitchy or too shallow? Tune sensitivity, deadband, and output range per axis in the Response tab, live, while wearing the goggles.</p>
+  </section>
+
+  <!-- PREFLIGHT -->
+  <section id="preflight" style="padding:0 0 72px;scroll-margin-top:80px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700"><span style="width:6px;height:6px;border-radius:50%;background:#e5383b;flex:none"></span>7. Preflight checks and troubleshooting</div>
+    <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+      <div style="display:flex;align-items:center;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box;background:#fafafa">
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700">Before every flight</span>
+      </div>
+      <div style="display:flex;align-items:center;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-size:14px;color:#3a3b3e;box-sizing:border-box">Double-tap recenters the camera with your head level and straight ahead.</div>
+      <div style="display:flex;align-items:center;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;font-size:14px;color:#3a3b3e;box-sizing:border-box">Your head-control switch turns tracking on and off, and off holds center.</div>
+      <div style="display:flex;align-items:center;min-height:44px;padding:8px 18px;font-size:14px;color:#3a3b3e;box-sizing:border-box">Power the tracker off: the camera should return to center, not freeze off-axis.</div>
+    </div>
+    <div style="border:1px solid #ececef;border-radius:13px;background:#ffffff;overflow:hidden">
+      <div style="display:flex;align-items:center;min-height:44px;padding:8px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box;background:#fafafa">
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9a9ca3;font-weight:700">If something is off</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:12px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+        <span style="font-size:14px;font-weight:600;color:#0b0b0c">The radio cannot find the tracker</span>
+        <span style="font-size:13.5px;line-height:1.55;color:#3a3b3e">Bluetooth is paused while the config hotspot is open - quad-tap to close it. The LED should show a slow heartbeat (advertising).</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:12px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+        <span style="font-size:14px;font-weight:600;color:#0b0b0c">Quad-tap does nothing</span>
+        <span style="font-size:13.5px;line-height:1.55;color:#3a3b3e">The hotspot only opens while the radio is disconnected. Disconnect or power off the radio first.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:12px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+        <span style="font-size:14px;font-weight:600;color:#0b0b0c">Axes swapped or reversed</span>
+        <span style="font-size:13.5px;line-height:1.55;color:#3a3b3e">Re-run Auto-detect in Orientation with the tracker mounted, then use Invert per channel for anything still backwards.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:12px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+        <span style="font-size:14px;font-weight:600;color:#0b0b0c">The camera slowly creeps</span>
+        <span style="font-size:13.5px;line-height:1.55;color:#3a3b3e">Yaw drift is normal without a magnetometer. Hold still for a few seconds so auto-calibration catches up, and double-tap to recenter any time.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:12px 18px;border-bottom:1px solid #f1f1f3;box-sizing:border-box">
+        <span style="font-size:14px;font-weight:600;color:#0b0b0c">Servos buzz or twitch at center</span>
+        <span style="font-size:13.5px;line-height:1.55;color:#3a3b3e">Raise the deadband a little in the Response tab, and check the servos have solid power from the receiver or BEC.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:12px 18px;box-sizing:border-box">
+        <span style="font-size:14px;font-weight:600;color:#0b0b0c">LED blinks twice, repeatedly</span>
+        <span style="font-size:13.5px;line-height:1.55;color:#3a3b3e">The IMU was not found - recheck the four wires and the AD0-to-GND jumper against the <a href="/crowmotion/#build" style="color:#e5383b;font-weight:600;text-decoration:none">wiring table</a>.</span>
+      </div>
+    </div>
+    <p style="margin:0;font-size:13.5px;color:#7c7e85">Still stuck? <a href="https://github.com/crowpilot-fc/crowmotion/issues" target="_blank" rel="noopener" style="color:#e5383b;font-weight:600">GitHub Issues</a> for bugs, <a href="https://github.com/crowpilot-fc/crowmotion/discussions" target="_blank" rel="noopener" style="color:#e5383b;font-weight:600">Discussions</a> for setup help.</p>
+  </section>
+
+</div>
+</main>
+
+<footer style="background:#e9e9eb;border-top:1px solid #e7e7ea">
+  <div style="max-width:960px;margin:0 auto;padding:36px 20px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <span style="width:22px;height:22px;border-radius:50%;border:2px solid #0b0b0c;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none">
+        <span style="width:6px;height:6px;border-radius:50%;background:#e5383b;display:block"></span>
+      </span>
+      <nav style="display:flex;gap:20px;flex-wrap:wrap" aria-label="Footer">
+        <a href="/crowmotion/" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">CrowMotion</a>
+        <a href="/crowlink/" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">CrowLink</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">GitHub</a>
+        <a href="https://updates.crowpilot.in" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">Flasher</a>
+        <a href="https://github.com/crowpilot-fc/crowmotion/blob/main/LICENSE" target="_blank" rel="noopener" style="text-decoration:none;color:#3a3b3e;font-size:13px;font-weight:600" class="hv5">License (Apache-2.0)</a>
+      </nav>
+    </div>
+    <p style="margin:0;font-size:12.5px;color:#9a9ca3"><a href="/crowmotion/" style="color:#3a3b3e;font-weight:600;text-decoration:none" class="hv5">CrowMotion</a> and <a href="/crowlink/" style="color:#3a3b3e;font-weight:600;text-decoration:none" class="hv5">CrowLink</a> are part of the Crowpilot flight controller family.</p>
+  </div>
+</footer>
+</body>
+</html>
