@@ -2,5 +2,10 @@
 dependencies:
   # mDNS: advertise the config page as crowmotion-XXXX.local on the local
   # network while in config mode. Pinned to the exact version built and
-  # hardware-verified (dependencies.lock is gitignored).
-  espressif/mdns: "==2.0.0"
+  # hardware-verified (dependencies.lock is gitignored). Note: an earlier pin
+  # said ==2.0.0, a version that does not exist on the registry; 1.11.3 is
+  # what the lock file resolved and what was flashed and bench-tested.
+  espressif/mdns: "==1.11.3"
+  # WS2812 status LED on the ESP32-S3 Super Mini (other boards use a plain
+  # GPIO LED and do not link this). Pinned exact, like mdns.
+  espressif/led_strip: "==2.5.5"

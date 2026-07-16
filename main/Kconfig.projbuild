@@ -2,14 +2,25 @@ menu "CrowMotion Configuration"
 
 choice CROWMOTION_BOARD
     prompt "Target board"
+    default CROWMOTION_BOARD_C3_SUPERMINI if IDF_TARGET_ESP32C3
+    default CROWMOTION_BOARD_C6_SUPERMINI if IDF_TARGET_ESP32C6
+    default CROWMOTION_BOARD_S3_SUPERMINI if IDF_TARGET_ESP32S3
     default CROWMOTION_BOARD_C3_SUPERMINI
     help
-        Selects the CrowMotion hardware variant. This sets the IMU I2C pins so all
-        wiring stays on one side of the board. v1 supports exactly one board:
-        the ESP32-C3 Super Mini.
+        Selects the CrowMotion hardware variant. This sets the IMU I2C pins
+        and the status LED type. The default follows the IDF target, so
+        `idf.py set-target <chip> build` picks the matching Super Mini board.
+        The C3 Super Mini is the hardware-verified v1 board; the S3 and C6
+        profiles build but are pending bench verification.
 
     config CROWMOTION_BOARD_C3_SUPERMINI
-        bool "ESP32-C3 Super Mini (v1)"
+        bool "ESP32-C3 Super Mini (v1, hardware-verified)"
+
+    config CROWMOTION_BOARD_C6_SUPERMINI
+        bool "ESP32-C6 Super Mini (pending hardware verification)"
+
+    config CROWMOTION_BOARD_S3_SUPERMINI
+        bool "ESP32-S3 Super Mini (pending hardware verification)"
 endchoice
 
 endmenu

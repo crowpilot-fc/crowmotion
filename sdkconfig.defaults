@@ -1,8 +1,10 @@
-# CrowMotion default build configuration for the ESP32-C3 Super Mini.
+# CrowMotion default build configuration, shared by all supported targets
+# (esp32c3, esp32s3, esp32c6 Super Mini boards).
 # These seed sdkconfig on first build. Override locally with `idf.py menuconfig`;
 # do not commit the generated sdkconfig (it is gitignored).
 
-# Target is set on the command line: idf.py set-target esp32c3
+# Target is set on the command line: idf.py set-target esp32c3|esp32s3|esp32c6
+# The board profile follows the target (see main/Kconfig.projbuild).
 
 # --- Bluetooth: NimBLE host, peripheral only ---
 CONFIG_BT_ENABLED=y
@@ -15,7 +17,7 @@ CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
 # Advertised device name (the radio sees this as the trainer source).
 CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="CrowMotion"
 
-# --- Flash size (4MB on the C3 Super Mini; needed for OTA partitions) ---
+# --- Flash size (4MB on the Super Mini boards; needed for OTA partitions) ---
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
 
@@ -37,3 +39,7 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 # --- Config mode: WiFi softAP + BLE coexistence, HTTP server WebSocket ---
 CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
 CONFIG_HTTPD_WS_SUPPORT=y
+
+# --- Code size: build with -Os so every target fits the 1.5MB OTA slots.
+# The C6 image is the largest (its radio stack); -Og overflows the slot there.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y

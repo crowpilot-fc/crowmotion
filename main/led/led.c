@@ -4,26 +4,81 @@
 // CrowMotion - DIY wireless FPV head tracker
 // Onboard status LED driver. A single task renders the current pattern from a
 // phase counter, so status changes and the confirmation flash are responsive.
+//
+// The board profile (board.h) decides the backend: a plain GPIO LED on the
+// C3/C6 Super Mini, or the addressable WS2812 on the S3 Super Mini. Patterns
+// are identical either way; the WS2812 just renders "on" as a dim white.
 
 #include "led.h"
 
-#include "driver/gpio.h"
+#include "board.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define LED_GPIO 8
-#define LED_LVL_ON 0    // active low: GPIO low = LED on
-#define LED_LVL_OFF 1
 #define TICK_MS 40
 
 static volatile led_state_t s_state = LED_SEARCHING;
 static volatile int s_fault = 0;       // 0 = none, else blink-code count
 static volatile bool s_flash_req = false;
 
+#if defined(CROWMOTION_LED_WS2812_GPIO)
+
+#include "led_strip.h"
+
+static led_strip_handle_t s_strip;
+
 static inline void out(bool on)
 {
-    gpio_set_level(LED_GPIO, on ? LED_LVL_ON : LED_LVL_OFF);
+    if (on) {
+        led_strip_set_pixel(s_strip, 0, 16, 16, 16);  // dim white
+        led_strip_refresh(s_strip);
+    } else {
+        led_strip_clear(s_strip);
+    }
 }
+
+static void led_hw_init(void)
+{
+    led_strip_config_t cfg = {
+        .strip_gpio_num = CROWMOTION_LED_WS2812_GPIO,
+        .max_leds = 1,
+    };
+    led_strip_rmt_config_t rmt = {
+        .resolution_hz = 10 * 1000 * 1000,
+    };
+    led_strip_new_rmt_device(&cfg, &rmt, &s_strip);
+}
+
+#else
+
+#include "driver/gpio.h"
+
+#if CROWMOTION_LED_ACTIVE_LOW
+#define LED_LVL_ON 0
+#define LED_LVL_OFF 1
+#else
+#define LED_LVL_ON 1
+#define LED_LVL_OFF 0
+#endif
+
+static inline void out(bool on)
+{
+    gpio_set_level(CROWMOTION_LED_GPIO, on ? LED_LVL_ON : LED_LVL_OFF);
+}
+
+static void led_hw_init(void)
+{
+    gpio_config_t io = {
+        .pin_bit_mask = 1ULL << CROWMOTION_LED_GPIO,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io);
+}
+
+#endif
 
 static void led_task(void *arg)
 {
@@ -64,14 +119,7 @@ static void led_task(void *arg)
 
 void led_init(void)
 {
-    gpio_config_t io = {
-        .pin_bit_mask = 1ULL << LED_GPIO,
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE,
-    };
-    gpio_config(&io);
+    led_hw_init();
     out(false);
     xTaskCreate(led_task, "led", 1536, NULL, 3, NULL);
 }

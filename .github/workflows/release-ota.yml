@@ -1,15 +1,19 @@
 # Publish a firmware release to the OTA update server and browser flasher.
 #
 # Triggered ONLY when a GitHub release is published (not on pushes or tag
-# creation). Builds both targets from the tagged source, verifies the tag
-# matches version.h, attaches the app binaries to the release, and deploys
-# the full site to Cloudflare Pages (updates.crowpilot.in):
+# creation). Builds the tracker for every supported target plus the bridge
+# from the tagged source, verifies the tag matches version.h, attaches the
+# app binaries to the release, and deploys the full site to Cloudflare Pages
+# (updates.crowpilot.in):
 #
-#   /                          browser flasher (ESP Web Tools)
-#   /flash/manifest.json       flasher manifest (chip -> image)
-#   /flash/*-merged.bin        complete images (bootloader+partitions+app)
-#   /crowmotion/latest.json    OTA manifest checked by devices
-#   /crowmotion/crowmotion-X.Y.Z.bin  OTA app image
+#   /                                 browser flasher (ESP Web Tools)
+#   /flash/manifest.json              legacy manifest (C3 tracker + C6 bridge)
+#   /flash/crowmotion.json            CrowMotion manifest (C3/S3/C6 builds)
+#   /flash/crowlink.json              CrowLink manifest (C6)
+#   /flash/*-merged*.bin              complete images (bootloader+partitions+app)
+#   /crowmotion/latest.json           legacy OTA manifest (fielded C3 devices)
+#   /crowmotion/latest-<target>.json  per-target OTA manifests (0.1.3+)
+#   /crowmotion/crowmotion-X.Y.Z[-<target>].bin  OTA app images
 #
 # Each Pages deploy replaces the site, so only the newest binaries live on
 # the update host; all historical binaries remain on GitHub Releases.
@@ -60,18 +64,56 @@ jobs:
             echo "::error::OTA_SIGNING_KEY_B64 secret is missing; cannot sign the release"; exit 1
           fi
           echo "$OTA_SIGNING_KEY_B64" | base64 -d > ota_signing_key.pem
-          # Layer the CI-only signing overlay onto the shared defaults so the
-          # tracker build produces an RSA-3072 signed image. Local/dev builds do
-          # not run this, so they stay unsigned and need no key. Only affects the
-          # root (tracker) project; the bridge uses its own bridge/sdkconfig.
+          # Layer the CI-only signing overlay onto the shared defaults so every
+          # tracker target build produces an RSA-3072 signed image. Local/dev
+          # builds do not run this, so they stay unsigned and need no key. Only
+          # affects the root (tracker) project; the bridge uses bridge/sdkconfig.
           cat sdkconfig.ci.signed >> sdkconfig.defaults
-          echo "signing enabled for the tracker build"
+          echo "signing enabled for the tracker builds"
 
+      # The tracker builds run sequentially in the same workspace: stash each
+      # target's outputs, then wipe build/ and sdkconfig so the next set-target
+      # starts clean from the (sign-enabled) defaults.
       - name: Build tracker (esp32c3)
         uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
         with:
           esp_idf_version: v5.5.4
           target: esp32c3
+
+      - name: Stash esp32c3 outputs
+        run: |
+          mkdir -p out/esp32c3
+          cp build/crowmotion.bin build/bootloader/bootloader.bin \
+             build/partition_table/partition-table.bin build/ota_data_initial.bin \
+             out/esp32c3/
+          sudo rm -rf build sdkconfig
+
+      - name: Build tracker (esp32s3)
+        uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32s3
+
+      - name: Stash esp32s3 outputs
+        run: |
+          mkdir -p out/esp32s3
+          cp build/crowmotion.bin build/bootloader/bootloader.bin \
+             build/partition_table/partition-table.bin build/ota_data_initial.bin \
+             out/esp32s3/
+          sudo rm -rf build sdkconfig
+
+      - name: Build tracker (esp32c6)
+        uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32c6
+
+      - name: Stash esp32c6 outputs
+        run: |
+          mkdir -p out/esp32c6
+          cp build/crowmotion.bin build/bootloader/bootloader.bin \
+             build/partition_table/partition-table.bin build/ota_data_initial.bin \
+             out/esp32c6/
 
       - name: Build CrowLink bridge (esp32c6)
         uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
@@ -85,13 +127,15 @@ jobs:
           VER="${TAG#v}"
           pip install --quiet "esptool==4.8.1"
 
-          # Fail the release unless the tracker image is actually signed with
+          # Fail the release unless every tracker image is actually signed with
           # our key (guards against a misbuild shipping an unverifiable image
           # that would then reject every future OTA on 0.1.3+ devices).
-          espsecure.py verify_signature --version 2 --keyfile ota_signing_key.pem \
-            build/crowmotion.bin | tee /tmp/verify.txt
-          grep -q "verification successful" /tmp/verify.txt \
-            || { echo "::error::tracker image is not validly signed"; exit 1; }
+          for T in esp32c3 esp32s3 esp32c6; do
+            espsecure.py verify_signature --version 2 --keyfile ota_signing_key.pem \
+              "out/$T/crowmotion.bin" | tee /tmp/verify.txt
+            grep -q "verification successful" /tmp/verify.txt \
+              || { echo "::error::$T tracker image is not validly signed"; exit 1; }
+          done
           rm -f ota_signing_key.pem
 
           mkdir -p site/flash site/crowmotion
@@ -103,14 +147,17 @@ jobs:
           # manifest and images cross-origin (Cloudflare Pages _headers).
           printf '/flash/*\n  Access-Control-Allow-Origin: *\n' > site/_headers
 
-          # Complete flash images for the browser flasher (offset 0).
-          esptool.py --chip esp32c3 merge_bin \
-            -o site/flash/crowmotion-merged.bin \
-            --flash_mode dio --flash_size 4MB \
-            0x0 build/bootloader/bootloader.bin \
-            0x8000 build/partition_table/partition-table.bin \
-            0xf000 build/ota_data_initial.bin \
-            0x20000 build/crowmotion.bin
+          # Complete flash images for the browser flasher (offset 0), one per
+          # tracker target plus the bridge.
+          for T in esp32c3 esp32s3 esp32c6; do
+            esptool.py --chip "$T" merge_bin \
+              -o "site/flash/crowmotion-merged-$T.bin" \
+              --flash_mode dio --flash_size 4MB \
+              0x0 "out/$T/bootloader.bin" \
+              0x8000 "out/$T/partition-table.bin" \
+              0xf000 "out/$T/ota_data_initial.bin" \
+              0x20000 "out/$T/crowmotion.bin"
+          done
           esptool.py --chip esp32c6 merge_bin \
             -o site/flash/crowlink-merged.bin \
             --flash_mode dio --flash_size 2MB \
@@ -118,6 +165,10 @@ jobs:
             0x8000 bridge/build/partition_table/partition-table.bin \
             0x10000 bridge/build/crowlink.bin
 
+          # Legacy names, kept so the currently-published flasher page and
+          # product pages keep working until they switch to the per-product
+          # manifests below.
+          cp site/flash/crowmotion-merged-esp32c3.bin site/flash/crowmotion-merged.bin
           cat > site/flash/manifest.json <<EOF
           {
             "name": "CrowMotion / CrowLink",
@@ -136,11 +187,55 @@ jobs:
           }
           EOF
 
-          # OTA: app image + manifest the devices poll.
-          cp build/crowmotion.bin "site/crowmotion/crowmotion-${VER}.bin"
+          # Per-product manifests: CrowMotion picks the image for whichever
+          # supported chip is plugged in; CrowLink is its own button.
+          cat > site/flash/crowmotion.json <<EOF
+          {
+            "name": "CrowMotion",
+            "version": "${VER}",
+            "new_install_prompt_erase": true,
+            "builds": [
+              {
+                "chipFamily": "ESP32-C3",
+                "parts": [ { "path": "crowmotion-merged-esp32c3.bin", "offset": 0 } ]
+              },
+              {
+                "chipFamily": "ESP32-S3",
+                "parts": [ { "path": "crowmotion-merged-esp32s3.bin", "offset": 0 } ]
+              },
+              {
+                "chipFamily": "ESP32-C6",
+                "parts": [ { "path": "crowmotion-merged-esp32c6.bin", "offset": 0 } ]
+              }
+            ]
+          }
+          EOF
+          cat > site/flash/crowlink.json <<EOF
+          {
+            "name": "CrowLink",
+            "version": "${VER}",
+            "new_install_prompt_erase": true,
+            "builds": [
+              {
+                "chipFamily": "ESP32-C6",
+                "parts": [ { "path": "crowlink-merged.bin", "offset": 0 } ]
+              }
+            ]
+          }
+          EOF
+
+          # OTA: per-target app images + manifests (0.1.3+ devices fetch
+          # latest-<target>.json), plus the legacy pair for fielded C3 devices
+          # running 0.1.2 or older.
+          for T in esp32c3 esp32s3 esp32c6; do
+            cp "out/$T/crowmotion.bin" "site/crowmotion/crowmotion-${VER}-$T.bin"
+            printf '{"version":"%s","url":"https://updates.crowpilot.in/crowmotion/crowmotion-%s-%s.bin"}\n' \
+              "$VER" "$VER" "$T" > "site/crowmotion/latest-$T.json"
+          done
+          cp out/esp32c3/crowmotion.bin "site/crowmotion/crowmotion-${VER}.bin"
           printf '{"version":"%s","url":"https://updates.crowpilot.in/crowmotion/crowmotion-%s.bin"}\n' \
             "$VER" "$VER" > site/crowmotion/latest.json
-          echo "manifest:" && cat site/crowmotion/latest.json
+          echo "manifests:" && cat site/crowmotion/latest.json site/crowmotion/latest-*.json
 
       - name: Attach binaries to the release
         env:
@@ -149,9 +244,13 @@ jobs:
           VER="${TAG#v}"
           cp bridge/build/crowlink.bin "crowlink-${VER}.bin"
           gh release upload "$TAG" \
-            "site/crowmotion/crowmotion-${VER}.bin" \
+            "site/crowmotion/crowmotion-${VER}-esp32c3.bin" \
+            "site/crowmotion/crowmotion-${VER}-esp32s3.bin" \
+            "site/crowmotion/crowmotion-${VER}-esp32c6.bin" \
             "crowlink-${VER}.bin" \
-            "site/flash/crowmotion-merged.bin" \
+            "site/flash/crowmotion-merged-esp32c3.bin" \
+            "site/flash/crowmotion-merged-esp32s3.bin" \
+            "site/flash/crowmotion-merged-esp32c6.bin" \
             "site/flash/crowlink-merged.bin" --clobber
 
       - name: Deploy to Cloudflare Pages

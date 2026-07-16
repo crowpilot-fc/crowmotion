@@ -2,8 +2,9 @@
 // Copyright 2026 Nitin Kumar
 //
 // CrowMotion - DIY wireless FPV head tracker
-// Onboard status LED (single blue LED on GPIO8, active-low, also a strap pin).
-// Driven only after boot, so the boot-time strapping level is unaffected.
+// Onboard status LED. The pin and type (plain GPIO or WS2812) come from the
+// board profile in board.h. Driven only after boot, so boot-time strapping
+// levels are unaffected.
 
 #pragma once
 

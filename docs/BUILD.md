@@ -1,8 +1,10 @@
 # Building and flashing CrowMotion (macOS)
 
-CrowMotion targets the ESP32-C3 and is built with Espressif ESP-IDF and the
-NimBLE Bluetooth host. v1 supports exactly one board: the ESP32-C3 Super Mini.
-This guide covers a macOS dev machine.
+CrowMotion is built with Espressif ESP-IDF and the NimBLE Bluetooth host.
+It builds for three targets: `esp32c3` (the hardware-verified v1 board, the
+ESP32-C3 Super Mini), plus `esp32s3` and `esp32c6` Super Mini boards (build
+supported, pending hardware verification). This guide covers a macOS dev
+machine; the examples use esp32c3.
 
 ## 1. Install ESP-IDF
 
@@ -14,16 +16,16 @@ mkdir -p ~/esp
 cd ~/esp
 git clone -b v5.5.4 --recursive https://github.com/espressif/esp-idf.git
 cd esp-idf
-./install.sh esp32c3
+./install.sh esp32c3,esp32s3,esp32c6
 ```
 
 Note: ESP-IDF builds its Python virtualenv against the `python3` it finds at
 install time. If you later upgrade Python (for example via Homebrew) and
 `export.sh` complains that the virtualenv is missing, just re-run
-`./install.sh esp32c3` to rebuild it. The toolchains are not re-downloaded.
+`./install.sh esp32c3,esp32s3,esp32c6` to rebuild it. The toolchains are not re-downloaded.
 
-This installs the RISC-V toolchain and Python environment for the esp32c3
-target. You only do this once.
+This installs the RISC-V (C3/C6) and Xtensa (S3) toolchains and the Python
+environment. You only do this once.
 
 ## 2. Activate the environment
 
@@ -47,9 +49,11 @@ idf.py build
 `set-target` is needed once (it generates sdkconfig from sdkconfig.defaults and
 the chip target). Re-run it only if you change targets.
 
-Targets: v1 builds for `esp32c3` only, and the only supported board is the
-ESP32-C3 Super Mini (it is the default and sole option under "CrowMotion
-Configuration -> Target board" in menuconfig).
+Targets: `esp32c3`, `esp32s3`, and `esp32c6`. The board profile under
+"CrowMotion Configuration -> Target board" in menuconfig defaults to the
+matching Super Mini board for the chosen target, so `idf.py set-target
+esp32s3 build` just works. The C3 Super Mini is the hardware-verified board;
+the S3 and C6 profiles' pin maps are pending verification on real hardware.
 
 ## 4. Flash and monitor
 
