@@ -1,7 +1,10 @@
 # Deploy the public website (crowpilot.in) to Cloudflare Pages whenever the
-# site source changes, and on every release. The product-page version pill is
-# stamped from the latest release tag at deploy time, so it can never go stale
-# again (the value hardcoded in the source is just a placeholder).
+# site source changes, and on every release.
+#
+# The site is currently a single "coming soon" holding page; the product
+# pages were removed (recoverable from git history) and a _redirects
+# catch-all sends every old URL to the holding page. When the product pages
+# come back, restore the version-stamp step that used to live here.
 name: deploy-website
 
 on:
@@ -19,20 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-        with:
-          fetch-depth: 0 # need tags to find the latest release
-
-      - name: Stamp latest release version into the product page
-        run: |
-          VER=$(git tag -l 'v*' | sort -V | tail -1)
-          VER="${VER#v}"
-          if [ -n "$VER" ]; then
-            sed -i "s#>v[0-9]\+\.[0-9]\+\.[0-9]\+</span>#>v${VER}</span>#" \
-              website/crowmotion/index.html
-            echo "stamped v$VER into the product page"
-          else
-            echo "no release tag yet; leaving the placeholder version"
-          fi
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
