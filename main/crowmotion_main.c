@@ -14,6 +14,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_ota_ops.h"
+#include "esp_system.h"
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -24,8 +25,9 @@
 #include "webconfig.h"
 #include "led.h"
 #include "para_ble.h"
-#include "espnow_tx.h"
-#include "mpu6500.h"
+#include "channel_state.h"
+#include "output_manager.h"
+#include "mpu6050.h"
 #include "madgwick.h"
 #include "mapping.h"
 
@@ -68,8 +70,10 @@ static void autodetect_orientation(float ax, float ay, float az)
 #define STILL_JITTER_DPS 1.5f         // sample-to-sample gyro change (sum of axes)
                                       // below this = the board is not being moved
 #define STILL_ACC_TOL 0.06f           // accel within this of 1 g = not translating
-#define STILL_GYRO_MAX_DPS 12.0f      // raw gyro below this may be bias, not a turn
-#define BIAS_ALPHA 0.004f             // gyro-bias tracking rate while still (M4)
+#define STILL_RESIDUAL_MAX_DPS 0.8f   // only learn bias when corrected motion is tiny
+#define BIAS_ALPHA 0.002f             // conservative gyro-bias tracking rate
+#define IMU_FAIL_LIMIT 5              // center output after 50 ms without valid IMU data
+#define IMU_RECOVER_SAMPLES 10        // require 100 ms of good data before resuming
 #define TAP_GYRO_MAX_DPS 300.0f       // ignore "taps" only during extreme spins; a
                                       // real tap kicks the gyro to ~50-200 dps, so
                                       // this must sit well above that (was 40, which
@@ -113,7 +117,7 @@ static void fusion_task(void *arg)
     int got = 0;
     for (int i = 0; i < BIAS_SAMPLES; i++) {
         imu_sample_t s;
-        if (mpu6500_read(&s) == ESP_OK) {
+        if (mpu6050_read(&s) == ESP_OK) {
             board_remap(&s);
             bx += s.gx;
             by += s.gy;
@@ -131,7 +135,7 @@ static void fusion_task(void *arg)
 
     // Seed orientation from gravity so fusion starts level-correct (no ramp).
     imu_sample_t s0;
-    if (mpu6500_read(&s0) == ESP_OK) {
+    if (mpu6050_read(&s0) == ESP_OK) {
         board_remap(&s0);
         madgwick_set_from_accel(&filt, s0.ax, s0.ay, s0.az);
     }
@@ -143,9 +147,18 @@ static void fusion_task(void *arg)
     int64_t last_tap_ms = 0;
     int tap_count = 0;
     float gpx = bx, gpy = by, gpz = bz;  // previous raw gyro, for jitter detection
+    int fail_count = 0;
+    int recover_count = IMU_RECOVER_SAMPLES;
     for (;;) {
         imu_sample_t s;
-        if (mpu6500_read(&s) == ESP_OK) {
+        if (mpu6050_read(&s) == ESP_OK) {
+            fail_count = 0;
+            if (recover_count < IMU_RECOVER_SAMPLES &&
+                ++recover_count == IMU_RECOVER_SAMPLES) {
+                channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, false);
+                led_fault(0);
+                ESP_LOGI("fusion", "IMU stream recovered; trainer output resumed");
+            }
             if (s_autodetect_req) {
                 s_autodetect_req = false;
                 autodetect_orientation(s.ax, s.ay, s.az);  // uses raw (pre-remap)
@@ -170,11 +183,12 @@ static void fusion_task(void *arg)
             gpy = s.gy;
             gpz = s.gz;
             float amg = sqrtf(s.ax * s.ax + s.ay * s.ay + s.az * s.az);
+            float rx = s.gx - bx, ry = s.gy - by, rz = s.gz - bz;
             bool board_still = jitter < STILL_JITTER_DPS &&
                                fabsf(amg - 1.0f) < STILL_ACC_TOL &&
-                               fabsf(s.gx) < STILL_GYRO_MAX_DPS &&
-                               fabsf(s.gy) < STILL_GYRO_MAX_DPS &&
-                               fabsf(s.gz) < STILL_GYRO_MAX_DPS;
+                               fabsf(rx) < STILL_RESIDUAL_MAX_DPS &&
+                               fabsf(ry) < STILL_RESIDUAL_MAX_DPS &&
+                               fabsf(rz) < STILL_RESIDUAL_MAX_DPS;
             if (board_still) {
                 bx += BIAS_ALPHA * (s.gx - bx);
                 by += BIAS_ALPHA * (s.gy - by);
@@ -239,13 +253,18 @@ static void fusion_task(void *arg)
             s_snap.yaw = yaw;
             s_snap.pitch = pitch;
             s_snap.roll = roll;
-            s_snap.pan_us = para_ble_get_channel(cc->pan_ch);
-            s_snap.tilt_us = para_ble_get_channel(cc->tilt_ch);
+            s_snap.pan_us = channel_state_get(cc->pan_ch);
+            s_snap.tilt_us = channel_state_get(cc->tilt_ch);
 
             if (++log_div >= 50) {  // ~2 Hz
                 log_div = 0;
                 ESP_LOGI("fusion", "ch pan %u  tilt %u", s_snap.pan_us, s_snap.tilt_us);
             }
+        } else if (++fail_count == IMU_FAIL_LIMIT) {
+            recover_count = 0;
+            channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, true);
+            led_fault(3);
+            ESP_LOGE("fusion", "IMU stream lost; trainer channels centered");
         }
         vTaskDelay(pdMS_TO_TICKS(FUSION_PERIOD_MS));
     }
@@ -267,23 +286,23 @@ void app_main(void)
 
     // Load persisted settings (orientation, gains, limits, taps, channels).
     config_init();
+    channel_state_init();
 
     // Config web UI controller (quad-tap brings up the WiFi hotspot).
     webconfig_init();
 
     // Milestone 1: stand up the PARA wireless trainer link and stream
     // centered channels. The IMU pipeline (M2+) is layered on later.
-    if (para_ble_start() != 0) {
+    if (para_ble_start(config_get()->name) != 0) {
         ESP_LOGE(TAG, "PARA link failed to start");
         return;
     }
 
-    // CrowLink bridge broadcast (ESP-NOW). Idle unless enabled in config.
-    crowlink_tx_init();
+    ESP_ERROR_CHECK(output_manager_init());
 
     // Bring up the IMU. If it is not wired yet, keep running so the PARA link
     // still advertises and streams centered channels.
-    if (mpu6500_init() == ESP_OK) {
+    if (mpu6050_init() == ESP_OK) {
         xTaskCreate(fusion_task, "fusion", 4096, NULL, 4, NULL);
     } else {
         led_fault(2);  // blink-code 2 = IMU not found
@@ -295,7 +314,15 @@ void app_main(void)
     // "pending verify". Getting this far (NVS, config, BLE up, IMU probed)
     // counts as a good boot; mark it valid so the bootloader keeps it.
     // If the image crashes before this line, the next reset rolls back.
-    esp_ota_mark_app_valid_cancel_rollback();
+    for (int i = 0; i < 100 && !output_manager_is_ready(); i++) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    if (!output_manager_is_ready() || !para_ble_wait_ready(5000)) {
+        ESP_LOGE(TAG, "startup self-test failed; leaving OTA image unverified");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        esp_restart();
+    }
+    ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
 
     ESP_LOGI(TAG, "CrowMotion up. Waiting for radio (X20S) to connect.");
 }

@@ -10,7 +10,7 @@
 #include <math.h>
 
 #include "config.h"
-#include "para_ble.h"
+#include "channel_state.h"
 
 static float s_ref[3];        // reference (center) yaw, pitch, roll
 static int s_have_ref = 0;
@@ -39,6 +39,10 @@ void mapping_update(float yaw_deg, float pitch_deg, float roll_deg)
 
     const crowmotion_config_t *c = config_get();
     float ang[2] = {yaw_deg, pitch_deg};  // 0 = pan, 1 = tilt
+    uint16_t channels[CROWMOTION_CHANNEL_COUNT];
+    for (int i = 0; i < CROWMOTION_CHANNEL_COUNT; i++) {
+        channels[i] = CROWMOTION_CHANNEL_CENTER_US;
+    }
 
     struct {
         uint8_t ch, en;
@@ -70,6 +74,7 @@ void mapping_update(float yaw_deg, float pitch_deg, float roll_deg)
         float us = (float)ax[i].center + ax[i].inv * ax[i].gain * rel;
         if (us < ax[i].mn) us = ax[i].mn;
         if (us > ax[i].mx) us = ax[i].mx;
-        para_ble_set_channel(ax[i].ch, (uint16_t)lroundf(us));
+        channels[ax[i].ch] = (uint16_t)lroundf(us);
     }
+    channel_state_replace(channels);
 }

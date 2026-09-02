@@ -297,12 +297,13 @@
         <div class="lrow"><span class="ks">Invert</span><button class="tg" id="tgTiltInv" onclick="togInv('tilt_inv')"><span></span></button></div>
       </div>
       <div class="lrow" style="margin-top:14px;border-top:1px solid #f1f1f3;padding-top:12px">
-        <span class="k">CrowLink bridge</span>
-        <button class="tg" id="tgBridge" onclick="tog('bridge_en')"><span></span></button>
+        <span class="k">Trainer output</span>
+        <div class="selwrap"><select id="outputMode" onchange="setNum('output_mode',+this.value)">
+          <option value="0">Auto</option><option value="1">Bluetooth</option><option value="2">3.5 mm PPM</option>
+        </select><svg class="chev" width="9" height="6" viewBox="0 0 9 6"><path d="M1 1l3.5 3.5L8 1" stroke="#9a9ca3" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>
       </div>
-      <div class="help">Broadcasts all 8 channels over ESP-NOW to a CrowLink
-        receiver plugged into any radio's trainer jack. Runs alongside
-        Bluetooth.</div>
+      <div class="lrow"><span class="ks">Invert PPM polarity</span><button class="tg" id="tgPpmInv" onclick="tog('ppm_inverted')"><span></span></button></div>
+      <div class="help">Auto uses Bluetooth with no cable and switches to local PPM when a trainer cable is inserted.</div>
     </section>
 
     <!-- RESPONSE -->
@@ -529,7 +530,8 @@ function renderControls(){
   const c = cfg;
   setTg("tgPanEn", !!c.pan_en); setTg("tgTiltEn", !!c.tilt_en);
   setTg("tgPanInv", c.pan_inv < 0); setTg("tgTiltInv", c.tilt_inv < 0);
-  setTg("tgBridge", !!c.bridge_en);
+  setTg("tgPpmInv", !!c.ppm_inverted);
+  if (document.activeElement !== $("outputMode")) $("outputMode").value = c.output_mode;
   if (document.activeElement !== $("panCh")) $("panCh").value = c.pan_ch;
   if (document.activeElement !== $("tiltCh")) $("tiltCh").value = c.tilt_ch;
   document.querySelectorAll(".slider").forEach(renderSlider);
@@ -622,6 +624,7 @@ function payload(){
 }
 async function save(){
   if (apPass && apPass.length < 8) { showToast("Hotspot password needs 8+ chars"); return; }
+  if (cfg.pan_en && cfg.tilt_en && cfg.pan_ch === cfg.tilt_ch) { showToast("Pan and tilt need different channels"); return; }
   try {
     await post("/config", payload());
     const apChanged = !!apPass;

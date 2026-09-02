@@ -9,7 +9,7 @@
 #include "sdkconfig.h"
 
 // Bump on each release. Compared against the update manifest's "version".
-#define CROWMOTION_VERSION "0.1.3"
+#define CROWMOTION_VERSION "0.2.0"
 
 // Update manifest URL, one manifest per chip target so every board downloads
 // an image built for it. The server serves JSON:

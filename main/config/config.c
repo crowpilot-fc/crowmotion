@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -21,7 +22,7 @@ static const char *TAG = "config";
 
 #define CFG_NVS_NAMESPACE "crowmotion"
 #define CFG_NVS_KEY "cfg"
-#define CFG_VERSION 4   // bump when the struct layout changes incompatibly
+#define CFG_VERSION 5   // bump when the struct layout changes incompatibly
 
 static crowmotion_config_t s_cfg;
 
@@ -47,7 +48,8 @@ void config_set_defaults(crowmotion_config_t *c)
     c->remap[1] = 3;        //               canonical y <- +imu z
     c->remap[2] = 1;        //               canonical z <- +imu x
     c->tap_intensity = 25.0f;
-    c->bridge_en = 0;
+    c->output_mode = CROWMOTION_OUTPUT_MODE_AUTO;
+    c->ppm_inverted = 0;
     strncpy(c->name, "CrowMotion", sizeof(c->name) - 1);
     strncpy(c->ap_pass, "crowmotion", sizeof(c->ap_pass) - 1);
 }
@@ -104,7 +106,8 @@ char *config_to_json(void)
     int rm[3] = {c->remap[0], c->remap[1], c->remap[2]};
     cJSON_AddItemToObject(j, "remap", cJSON_CreateIntArray(rm, 3));
     cJSON_AddNumberToObject(j, "tap", c->tap_intensity);
-    cJSON_AddNumberToObject(j, "bridge_en", c->bridge_en);
+    cJSON_AddNumberToObject(j, "output_mode", c->output_mode);
+    cJSON_AddNumberToObject(j, "ppm_inverted", c->ppm_inverted);
     cJSON_AddStringToObject(j, "name", c->name);
     cJSON_AddStringToObject(j, "wifi_ssid", c->wifi_ssid);  // passwords (wifi_pass,
                                                             // ap_pass) never exposed
@@ -221,8 +224,13 @@ esp_err_t config_apply_json(const char *json)
     if ((it = cJSON_GetObjectItem(j, "tap")) && cJSON_IsNumber(it)) {
         c->tap_intensity = clampf(it->valuedouble, 6.0f, 60.0f);
     }
-    if ((it = cJSON_GetObjectItem(j, "bridge_en")) && cJSON_IsNumber(it)) {
-        c->bridge_en = it->valuedouble != 0 ? 1 : 0;
+    if ((it = cJSON_GetObjectItem(j, "output_mode")) && cJSON_IsNumber(it) &&
+        it->valuedouble >= CROWMOTION_OUTPUT_MODE_AUTO &&
+        it->valuedouble <= CROWMOTION_OUTPUT_MODE_PPM) {
+        c->output_mode = (uint8_t)it->valuedouble;
+    }
+    if ((it = cJSON_GetObjectItem(j, "ppm_inverted")) && cJSON_IsNumber(it)) {
+        c->ppm_inverted = it->valuedouble != 0 ? 1 : 0;
     }
 
     // Orientation remap: each entry must be a number in {+/-1,+/-2,+/-3};
@@ -241,13 +249,20 @@ esp_err_t config_apply_json(const char *json)
             }
             nr[i] = (int8_t)v;
         }
-        if (ok) {
+        if (ok && abs(nr[0]) != abs(nr[1]) &&
+            abs(nr[0]) != abs(nr[2]) && abs(nr[1]) != abs(nr[2])) {
             c->remap[0] = nr[0];
             c->remap[1] = nr[1];
             c->remap[2] = nr[2];
         } else {
             ESP_LOGW(TAG, "rejected invalid remap array");
         }
+    }
+
+    if (c->pan_enabled && c->tilt_enabled && c->pan_ch == c->tilt_ch) {
+        ESP_LOGW(TAG, "rejected duplicate enabled output channel");
+        cJSON_Delete(j);
+        return ESP_ERR_INVALID_ARG;
     }
 
     if ((it = cJSON_GetObjectItem(j, "name")) && cJSON_IsString(it)) {

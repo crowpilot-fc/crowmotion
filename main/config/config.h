@@ -43,8 +43,9 @@ typedef struct {
     // --- Tap detection ---
     float tap_intensity;  // accel-magnitude jerk threshold (g/s)
 
-    // --- CrowLink bridge ---
-    uint8_t bridge_en;    // broadcast channels over ESP-NOW to a bridge
+    // --- Trainer output ---
+    uint8_t output_mode;  // crowmotion_output_mode_t
+    uint8_t ppm_inverted; // 0 = positive pulses, 1 = inverted pulses
 
     // --- Identity ---
     char name[20];        // BLE device name and AP SSID base
@@ -56,6 +57,12 @@ typedef struct {
     // --- Config hotspot WPA2 passphrase (8..64 chars; default "crowmotion") ---
     char ap_pass[65];
 } crowmotion_config_t;
+
+typedef enum {
+    CROWMOTION_OUTPUT_MODE_AUTO = 0,
+    CROWMOTION_OUTPUT_MODE_BLUETOOTH = 1,
+    CROWMOTION_OUTPUT_MODE_PPM = 2,
+} crowmotion_output_mode_t;
 
 // Load config from NVS, or apply defaults if absent/invalid. Call once at boot.
 void config_init(void);

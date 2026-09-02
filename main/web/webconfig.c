@@ -30,8 +30,7 @@
 
 #include "config.h"
 #include "tracker.h"
-#include "para_ble.h"
-#include "espnow_tx.h"
+#include "output_manager.h"
 #include "version.h"
 #include "led.h"
 
@@ -551,8 +550,7 @@ static void ws_push(void)
 
 static void enter_config(void)
 {
-    para_ble_pause();
-    crowlink_tx_pause();  // release the WiFi radio before the hotspot claims it
+    output_manager_pause();
     wifi_ap_start();
     httpd_start_all();
     mdns_start();  // crowmotion-XXXX.local for LAN access to the config page
@@ -570,8 +568,8 @@ static void exit_config(void)
     s_ws_fd = -1;
     mdns_stop();
     wifi_ap_stop();
-    para_ble_resume();
-    crowlink_tx_resume();  // re-arm the bridge broadcast if it is enabled
+    tracker_request_recenter();
+    output_manager_resume();
     led_set(LED_SEARCHING);
     ESP_LOGI(TAG, "config mode off, radio link resumed");
 }
@@ -580,7 +578,7 @@ static void mode_task(void *arg)
 {
     for (;;) {
         xSemaphoreTake(s_toggle_sem, portMAX_DELAY);
-        if (para_ble_is_connected()) {
+        if (output_manager_is_ble_connected()) {
             ESP_LOGW(TAG, "ignoring config request: radio is connected");
             continue;
         }

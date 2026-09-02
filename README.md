@@ -1,59 +1,78 @@
 # CrowMotion
 
-A wireless FPV head tracker you can build for about **$5**.
+CrowMotion is an open-source, self-powered FPV head tracker that mounts on a
+goggle strap. It sends eight trainer channels directly from one ESP32-C3:
+
+- FrSky PARA over Bluetooth when the radio supports it
+- CPPM/PPM through an onboard 3.5 mm trainer jack for other radios
+- Auto mode switches to PPM when a cable is inserted and otherwise uses BLE
 
 [![Build](https://github.com/crowpilot-fc/crowmotion/actions/workflows/build.yml/badge.svg)](https://github.com/crowpilot-fc/crowmotion/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-> ## Guide, photos, downloads, and the browser flasher are at **[crowpilot.in/crowmotion](https://crowpilot.in/crowmotion/)**
->
-> This repository holds the **source code**. If you want to build one, flash it,
-> wire it, or print a case, start on the website. It has everything.
+## Release status
 
-Turn your head and the FPV camera follows. CrowMotion reads your head motion with
-an ESP32-C3 and an MPU6500 IMU and streams it to your RC radio over the FrSky
-PARA Bluetooth wireless trainer link, so a pan/tilt camera on your aircraft
-mirrors where you look. Two cheap parts, four wires.
+The earlier BLE prototype worked with a real radio. The integrated battery,
+MPU6050, jack-detect, and local PPM design is now at development version 0.2.0.
+It compiles, but it must pass hardware bring-up, trainer-port electrical tests,
+runtime tests, and flight testing before a stable release. Do not use it for a
+safety-critical model until those gates are complete.
 
-**Work in progress:** the firmware works and is bench-verified against a real
-radio (FrSky X20S / EthOS). It has not been flight-tested yet.
+## Locked reference hardware
 
-## Using it
+- ESP32-C3 Super Mini
+- MPU6050 breakout, I2C address 0x68
+- LX-LCBST USB-C charger/5 V boost module
+- 601230 350 mAh protected 1S LiPo
+- Two-position SPST slide power switch in the boost module's 5 V output
+- Switched 3.5 mm TRS female jack with an isolated detect contact
+- 2.2 kohm series resistor from GPIO6 to jack tip
+- 100 kohm pulldown from jack tip to ground
+- Low-capacitance 5 V ESD protection at the jack
 
-Everything a builder needs lives on the website, not here:
+The switch placement lets the battery charge while CrowMotion is off. Verify
+the exact LX-LCBST charger IC and set charge current to 150-175 mA unless the
+cell datasheet explicitly permits more. Do not charge and operate at the same
+time until proper power-path behavior is confirmed.
 
-- **Flash from your browser** (no toolchain): [crowpilot.in/crowmotion#flash](https://crowpilot.in/crowmotion/#flash)
-- **Build guide, wiring, and photos:** [crowpilot.in/crowmotion#build](https://crowpilot.in/crowmotion/#build)
-- **Configure and use it:** [crowpilot.in/crowmotion#configure](https://crowpilot.in/crowmotion/#configure)
-- **Downloads** (firmware images, printable case): [Releases](https://github.com/crowpilot-fc/crowmotion/releases)
+## Pin assignment
 
-## Building from source (developers)
+| Function | ESP32-C3 GPIO |
+| --- | ---: |
+| MPU6050 SDA | 4 |
+| MPU6050 SCL | 3 |
+| PPM output | 6 |
+| Jack detect, active low | 7 |
+| Onboard status LED | 8 |
 
-Built from scratch on Espressif ESP-IDF (v5.5.4) with the NimBLE Bluetooth host.
+Jack tip is signal, sleeve is ground, and ring is not connected. The PPM
+polarity is configurable. GPIO2 is intentionally unused because it is a boot
+strapping pin.
 
-- **Hardware:** ESP32-C3 Super Mini + MPU6500 over I2C
-  (SDA = GPIO4/D2, SCL = GPIO3/D1, AD0 to GND, VCC = 3V3).
-- **Build and flash:** full setup in [docs/BUILD.md](docs/BUILD.md). Short version:
+## Controls
 
-  ```
-  idf.py set-target esp32c3
-  idf.py build
-  idf.py -p /dev/cu.usbmodemXXXX flash monitor
-  ```
+- Double-tap: recenter pan and tilt
+- Four taps: enter or exit configuration mode
+- Slider switch: hard power on or off
 
-- **Repo layout:**
-  - `main/` - tracker firmware (fusion, PARA BLE link, config web UI, OTA)
-  - `bridge/` - CrowLink, the wireless trainer-jack bridge (ESP32-C6)
-  - `components/crowlink/` - shared ESP-NOW wire protocol
-  - `docs/` - build docs
-  - `website/`, `flasher/` - the public site and browser flasher
-- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md). **Security policy:** [SECURITY.md](SECURITY.md).
+Configuration includes channel assignment, gain, limits, axis orientation,
+output mode, PPM polarity, device name, WiFi, and OTA update settings.
 
-## Credits and license
+## Build
 
-Original implementation, inspired by (but not derived from)
-[RC HeadTracker](https://github.com/dlktdr/HeadTracker) by Cliff Blackburn
-(GPL-3.0) and [HeadTracker](https://github.com/ysoldak/HeadTracker) by Yury
-Soldak (public domain). No third-party source is reused. See [NOTICE](NOTICE).
+CrowMotion uses ESP-IDF 5.5.4 and targets only the ESP32-C3 Super Mini.
 
-Apache License 2.0. See [LICENSE](LICENSE).
+```sh
+. "$IDF_PATH/export.sh"
+idf.py set-target esp32c3
+idf.py build
+idf.py -p /dev/cu.usbmodemXXXX flash monitor
+```
+
+The application binary is generated at `build/crowmotion.bin`. Tagged releases
+are signed, attached to GitHub Releases, and staged for the browser flasher and
+OTA service. See [docs/BUILD.md](docs/BUILD.md) for toolchain details.
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

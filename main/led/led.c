@@ -5,9 +5,7 @@
 // Onboard status LED driver. A single task renders the current pattern from a
 // phase counter, so status changes and the confirmation flash are responsive.
 //
-// The board profile (board.h) decides the backend: a plain GPIO LED on the
-// C3/C6 Super Mini, or the addressable WS2812 on the S3 Super Mini. Patterns
-// are identical either way; the WS2812 just renders "on" as a dim white.
+// The ESP32-C3 Super Mini onboard LED is driven as a plain active-low GPIO.
 
 #include "led.h"
 
@@ -20,36 +18,6 @@
 static volatile led_state_t s_state = LED_SEARCHING;
 static volatile int s_fault = 0;       // 0 = none, else blink-code count
 static volatile bool s_flash_req = false;
-
-#if defined(CROWMOTION_LED_WS2812_GPIO)
-
-#include "led_strip.h"
-
-static led_strip_handle_t s_strip;
-
-static inline void out(bool on)
-{
-    if (on) {
-        led_strip_set_pixel(s_strip, 0, 16, 16, 16);  // dim white
-        led_strip_refresh(s_strip);
-    } else {
-        led_strip_clear(s_strip);
-    }
-}
-
-static void led_hw_init(void)
-{
-    led_strip_config_t cfg = {
-        .strip_gpio_num = CROWMOTION_LED_WS2812_GPIO,
-        .max_leds = 1,
-    };
-    led_strip_rmt_config_t rmt = {
-        .resolution_hz = 10 * 1000 * 1000,
-    };
-    led_strip_new_rmt_device(&cfg, &rmt, &s_strip);
-}
-
-#else
 
 #include "driver/gpio.h"
 
@@ -77,8 +45,6 @@ static void led_hw_init(void)
     };
     gpio_config(&io);
 }
-
-#endif
 
 static void led_task(void *arg)
 {

@@ -4,33 +4,36 @@
 idf_component_register(
     SRCS
         "crowmotion_main.c"
+        "channels/channel_state.c"
         "para/para_ble.c"
-        "imu/mpu6500.c"
+        "imu/mpu6050.c"
         "fusion/madgwick.c"
         "mapping/mapping.c"
+        "output/ppm_output.c"
+        "output/output_manager.c"
         "config/config.c"
         "web/webconfig.c"
         "led/led.c"
-        "link/espnow_tx.c"
     INCLUDE_DIRS
         "."
+        "channels"
         "para"
         "imu"
         "fusion"
         "mapping"
+        "output"
         "config"
         "web"
         "led"
-        "link"
     EMBED_FILES
         "web/index.html"
     PRIV_REQUIRES
-        crowlink
         mdns
         bt
         nvs_flash
         esp_driver_i2c
         esp_driver_gpio
+        esp_driver_rmt
         esp_timer
         json
         esp_wifi

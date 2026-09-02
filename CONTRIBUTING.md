@@ -8,7 +8,7 @@ reliable are very welcome.
 
 Build instructions (ESP-IDF v5.5.4, ESP32-C3) are in
 [docs/BUILD.md](docs/BUILD.md). The only supported v1 hardware is the
-ESP32-C3 Super Mini plus an MPU6500 module.
+ESP32-C3 Super Mini plus an MPU6050 module.
 
 ## Making changes
 
@@ -31,10 +31,9 @@ where possible.
 
 ## Scope notes
 
-- v1 is deliberately minimal: one board, one IMU, PARA BLE trainer output.
-- Feature ideas beyond that (other boards, other output protocols, battery
-  operation) are v2 territory; feel free to open a discussion first so we
-  can align before you write code.
+- Version 0.2 is deliberately focused on one board and one IMU, with PARA BLE
+  and local trainer-jack PPM from the same self-powered unit.
+- Open a discussion before adding other boards or output protocols.
 
 ## License
 

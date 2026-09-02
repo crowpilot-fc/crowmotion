@@ -35,6 +35,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 
 #include "led.h"
+#include "channel_state.h"
 
 static const char *TAG = "para";
 
@@ -59,9 +60,6 @@ static const char *TAG = "para";
 #define PARA_SVC_SETTINGS_UUID 0xFFFA  // advertised alongside 0xFFF0, as FrSky expects
 #define PARA_CHR_FFF6_UUID 0xFFF6
 
-// Current channel values, centered until the IMU pipeline drives them.
-static uint16_t s_channels[CROWMOTION_PARA_NUM_CHANNELS];
-
 // BLE state.
 static uint8_t s_own_addr_type;
 static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
@@ -69,35 +67,9 @@ static uint16_t s_fff6_val_handle;
 static bool s_boot_sent;
 static TickType_t s_stream_at_tick;
 static bool s_paused = false;   // true while WiFi config mode owns the radio
+static volatile bool s_ready;
 
 static void para_advertise(void);
-
-// --- Channel state -----------------------------------------------------------
-
-static void channels_init_centered(void)
-{
-    for (int i = 0; i < CROWMOTION_PARA_NUM_CHANNELS; i++) {
-        s_channels[i] = CROWMOTION_PARA_CH_CENTER;
-    }
-}
-
-void para_ble_set_channel(uint8_t ch, uint16_t value_us)
-{
-    if (ch >= CROWMOTION_PARA_NUM_CHANNELS) {
-        return;
-    }
-    if (value_us < CROWMOTION_PARA_CH_MIN) {
-        value_us = CROWMOTION_PARA_CH_MIN;
-    } else if (value_us > CROWMOTION_PARA_CH_MAX) {
-        value_us = CROWMOTION_PARA_CH_MAX;
-    }
-    s_channels[ch] = value_us;
-}
-
-uint16_t para_ble_get_channel(uint8_t ch)
-{
-    return (ch < CROWMOTION_PARA_NUM_CHANNELS) ? s_channels[ch] : 0;
-}
 
 // --- PARA frame encoding -----------------------------------------------------
 
@@ -126,13 +98,15 @@ static uint8_t para_encode_frame(uint8_t *buf)
 {
     uint8_t idx = 0;
     uint8_t crc = 0;
+    uint16_t channels[CROWMOTION_CHANNEL_COUNT];
+    channel_state_copy(channels);
 
     buf[idx++] = PARA_START_STOP;
     para_push(buf, &idx, &crc, PARA_FRAME_TYPE);
 
-    for (int ch = 0; ch < CROWMOTION_PARA_NUM_CHANNELS; ch += 2) {
-        uint16_t v1 = s_channels[ch];
-        uint16_t v2 = s_channels[ch + 1];
+    for (int ch = 0; ch < CROWMOTION_CHANNEL_COUNT; ch += 2) {
+        uint16_t v1 = channels[ch];
+        uint16_t v2 = channels[ch + 1];
         para_push(buf, &idx, &crc, v1 & 0x00FF);
         para_push(buf, &idx, &crc, ((v1 & 0x0F00) >> 4) | ((v2 & 0x00F0) >> 4));
         para_push(buf, &idx, &crc, ((v2 & 0x000F) << 4) | ((v2 & 0x0F00) >> 8));
@@ -266,7 +240,10 @@ void para_ble_pause(void)
 void para_ble_resume(void)
 {
     s_paused = false;
-    para_advertise();
+    if (s_ready && s_conn_handle == BLE_HS_CONN_HANDLE_NONE &&
+        !ble_gap_adv_active()) {
+        para_advertise();
+    }
 }
 
 static void para_advertise(void)
@@ -317,6 +294,7 @@ static void para_advertise(void)
         ESP_LOGE(TAG, "adv_start failed (rc %d)", rc);
         return;
     }
+    s_ready = true;
     ESP_LOGI(TAG, "Advertising as \"%s\" (services 0x%04X, 0x%04X)", name,
              PARA_SVC_UUID, PARA_SVC_SETTINGS_UUID);
 }
@@ -342,6 +320,7 @@ static void on_reset(int reason)
 {
     ESP_LOGW(TAG, "BLE host reset (reason %d)", reason);
     s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+    s_ready = false;
 }
 
 static void host_task(void *param)
@@ -350,10 +329,8 @@ static void host_task(void *param)
     nimble_port_freertos_deinit();
 }
 
-int para_ble_start(void)
+int para_ble_start(const char *device_name)
 {
-    channels_init_centered();
-
     esp_err_t err = nimble_port_init();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "nimble_port_init failed (%d)", err);
@@ -377,7 +354,8 @@ int para_ble_start(void)
         return -1;
     }
 
-    rc = ble_svc_gap_device_name_set(PARA_DEVICE_NAME);
+    const char *name = (device_name && device_name[0]) ? device_name : PARA_DEVICE_NAME;
+    rc = ble_svc_gap_device_name_set(name);
     if (rc != 0) {
         ESP_LOGE(TAG, "device_name_set failed (rc %d)", rc);
         return -1;
@@ -392,6 +370,16 @@ int para_ble_start(void)
     }
 
     ESP_LOGI(TAG, "PARA link up: %d channels at %d us, advertising as \"%s\"",
-             CROWMOTION_PARA_NUM_CHANNELS, CROWMOTION_PARA_CH_CENTER, PARA_DEVICE_NAME);
+             CROWMOTION_CHANNEL_COUNT, CROWMOTION_CHANNEL_CENTER_US, name);
     return 0;
+}
+
+bool para_ble_wait_ready(uint32_t timeout_ms)
+{
+    TickType_t start = xTaskGetTickCount();
+    TickType_t timeout = pdMS_TO_TICKS(timeout_ms);
+    while (!s_ready && (xTaskGetTickCount() - start) < timeout) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    return s_ready;
 }

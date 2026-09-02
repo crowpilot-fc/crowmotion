@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- SPDX-License-Identifier: Apache-2.0
      CrowMotion browser flasher, served at https://updates.crowpilot.in/
-     Flashes CrowMotion (ESP32-C3) or CrowLink (ESP32-C6) over USB from
+     Flashes CrowMotion (ESP32-C3) over USB from
      Chrome/Edge via Web Serial, using ESP Web Tools. The manifest and
      merged firmware images are published next to this page by the
      release-ota GitHub workflow. -->
@@ -43,8 +43,8 @@
 </head>
 <body>
   <h1>CrowMotion Flasher</h1>
-  <p class="sub">Flash the head tracker or the CrowLink bridge straight from
-    your browser. No drivers, no toolchain.</p>
+  <p class="sub">Flash the ESP32-C3 head tracker straight from your browser.
+    No drivers, no toolchain.</p>
 
   <div class="card">
     <h2>Flash</h2>
@@ -52,8 +52,7 @@
       <li>Plug the board into this computer over USB-C.</li>
       <li>Click Connect and pick the serial port
         (<code>USB JTAG/serial</code>).</li>
-      <li>The right firmware is chosen automatically:
-        ESP32-C3 gets CrowMotion, ESP32-C6 gets CrowLink.</li>
+      <li>Select an ESP32-C3 Super Mini. Other chips are not supported.</li>
     </ol>
     <p style="margin:16px 0 4px">
       <esp-web-install-button manifest="flash/manifest.json">

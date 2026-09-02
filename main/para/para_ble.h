@@ -24,26 +24,10 @@
 extern "C" {
 #endif
 
-// Number of trainer channels CrowMotion reports.
-#define CROWMOTION_PARA_NUM_CHANNELS 8
-
-// Channel value range, in microseconds (RC convention). 1500 = centered.
-#define CROWMOTION_PARA_CH_MIN 988
-#define CROWMOTION_PARA_CH_CENTER 1500
-#define CROWMOTION_PARA_CH_MAX 2012
-
 // Start BLE, advertise the PARA service, and begin streaming channels.
-// Until the IMU pipeline is wired (M2+), all channels are held at center.
 // Returns 0 on success, negative on error.
-int para_ble_start(void);
-
-// Update the channel that the next PARA notify will send.
-// ch is 0-based; value_us is clamped to [CH_MIN, CH_MAX].
-// Safe to call from the tracker task once fusion/mapping is online (M5).
-void para_ble_set_channel(uint8_t ch, uint16_t value_us);
-
-// Read back the current value (microseconds) of a channel.
-uint16_t para_ble_get_channel(uint8_t ch);
+int para_ble_start(const char *device_name);
+bool para_ble_wait_ready(uint32_t timeout_ms);
 
 // True while a radio (central) is connected.
 bool para_ble_is_connected(void);
