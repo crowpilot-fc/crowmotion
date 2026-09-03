@@ -578,8 +578,11 @@ static void mode_task(void *arg)
 {
     for (;;) {
         xSemaphoreTake(s_toggle_sem, portMAX_DELAY);
-        if (output_manager_is_ble_connected()) {
-            ESP_LOGW(TAG, "ignoring config request: radio is connected");
+        bool active_radio = output_manager_is_ble_connected() ||
+                            (output_manager_active_output() == CROWMOTION_OUTPUT_PPM &&
+                             output_manager_is_jack_inserted());
+        if (active_radio) {
+            ESP_LOGW(TAG, "ignoring config request: disconnect trainer link first");
             continue;
         }
         enter_config();

@@ -27,7 +27,8 @@ extern "C" {
 // Start BLE, advertise the PARA service, and begin streaming channels.
 // Returns 0 on success, negative on error.
 int para_ble_start(const char *device_name);
-bool para_ble_wait_ready(uint32_t timeout_ms);
+bool para_ble_wait_host_ready(uint32_t timeout_ms);
+bool para_ble_is_host_ready(void);
 
 // True while a radio (central) is connected.
 bool para_ble_is_connected(void);

@@ -14,7 +14,6 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_ota_ops.h"
-#include "esp_system.h"
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -65,6 +64,7 @@ static void autodetect_orientation(float ax, float ay, float az)
 #define FUSION_PERIOD_MS 10           // 100 Hz fusion loop
 #define FUSION_BETA 0.1f
 #define BIAS_SAMPLES 100              // ~1 s startup gyro-bias estimate
+#define STARTUP_GYRO_MAX_DPS 8.0f     // reject movement during startup calibration
 #define SETTLE_ITERS 50               // ~0.5 s for fusion to converge before centering
 #define DEG_TO_RAD 0.01745329252f
 #define STILL_JITTER_DPS 1.5f         // sample-to-sample gyro change (sum of axes)
@@ -72,8 +72,10 @@ static void autodetect_orientation(float ax, float ay, float az)
 #define STILL_ACC_TOL 0.06f           // accel within this of 1 g = not translating
 #define STILL_RESIDUAL_MAX_DPS 0.8f   // only learn bias when corrected motion is tiny
 #define BIAS_ALPHA 0.002f             // conservative gyro-bias tracking rate
-#define IMU_FAIL_LIMIT 5              // center output after 50 ms without valid IMU data
+#define IMU_FAIL_LIMIT 5              // center after about 150 ms of timed-out reads
 #define IMU_RECOVER_SAMPLES 10        // require 100 ms of good data before resuming
+#define IMU_FROZEN_SAMPLES 25         // identical raw data for 250 ms is implausible
+#define IMU_HEALTH_INTERVAL 100        // re-check identity and awake state every second
 #define TAP_GYRO_MAX_DPS 300.0f       // ignore "taps" only during extreme spins; a
                                       // real tap kicks the gyro to ~50-200 dps, so
                                       // this must sit well above that (was 40, which
@@ -105,6 +107,53 @@ static void board_remap(imu_sample_t *s)
     s->gx = go[0];  s->gy = go[1];  s->gz = go[2];
 }
 
+static void calibrate_gyro_bias(float *bx, float *by, float *bz)
+{
+    float sx = 0, sy = 0, sz = 0;
+    float px = 0, py = 0, pz = 0;
+    bool have_prev = false;
+    int still_samples = 0;
+    int log_div = 0;
+
+    channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, true);
+    ESP_LOGI("fusion", "Hold CrowMotion still for gyro calibration");
+    while (still_samples < BIAS_SAMPLES) {
+        imu_sample_t s;
+        if (mpu6050_read(&s) == ESP_OK) {
+            board_remap(&s);
+            float amg = sqrtf(s.ax * s.ax + s.ay * s.ay + s.az * s.az);
+            float jitter = have_prev ? fabsf(s.gx - px) + fabsf(s.gy - py) +
+                                       fabsf(s.gz - pz) : 1000.0f;
+            bool still = have_prev && isfinite(amg) &&
+                         fabsf(amg - 1.0f) < STILL_ACC_TOL &&
+                         jitter < STILL_JITTER_DPS &&
+                         fabsf(s.gx) < STARTUP_GYRO_MAX_DPS &&
+                         fabsf(s.gy) < STARTUP_GYRO_MAX_DPS &&
+                         fabsf(s.gz) < STARTUP_GYRO_MAX_DPS;
+            px = s.gx; py = s.gy; pz = s.gz;
+            have_prev = true;
+            if (still) {
+                sx += s.gx; sy += s.gy; sz += s.gz;
+                still_samples++;
+            } else {
+                sx = sy = sz = 0;
+                still_samples = 0;
+            }
+        } else if (log_div % 100 == 0) {
+            mpu6050_recover();
+        }
+        log_div++;
+        if (log_div % 200 == 0 && still_samples < BIAS_SAMPLES) {
+            ESP_LOGI("fusion", "Waiting for stillness (%d/%d)",
+                     still_samples, BIAS_SAMPLES);
+        }
+        vTaskDelay(pdMS_TO_TICKS(FUSION_PERIOD_MS));
+    }
+    *bx = sx / BIAS_SAMPLES;
+    *by = sy / BIAS_SAMPLES;
+    *bz = sz / BIAS_SAMPLES;
+}
+
 // Read the IMU, run Madgwick 6DOF fusion with continuous gyro auto-calibration
 // (M4) and the temple-mount remap, then drive the pan/tilt channels (M5).
 static void fusion_task(void *arg)
@@ -112,25 +161,8 @@ static void fusion_task(void *arg)
     madgwick_t filt;
     madgwick_init(&filt, FUSION_BETA);
 
-    // Estimate gyro bias assuming the board is roughly still at startup.
     float bx = 0, by = 0, bz = 0;
-    int got = 0;
-    for (int i = 0; i < BIAS_SAMPLES; i++) {
-        imu_sample_t s;
-        if (mpu6050_read(&s) == ESP_OK) {
-            board_remap(&s);
-            bx += s.gx;
-            by += s.gy;
-            bz += s.gz;
-            got++;
-        }
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    if (got > 0) {
-        bx /= got;
-        by /= got;
-        bz /= got;
-    }
+    calibrate_gyro_bias(&bx, &by, &bz);
     ESP_LOGI("fusion", "startup gyro bias [dps] % .2f % .2f % .2f", bx, by, bz);
 
     // Seed orientation from gravity so fusion starts level-correct (no ramp).
@@ -149,22 +181,49 @@ static void fusion_task(void *arg)
     float gpx = bx, gpy = by, gpz = bz;  // previous raw gyro, for jitter detection
     int fail_count = 0;
     int recover_count = IMU_RECOVER_SAMPLES;
+    int frozen_count = 0;
+    int health_div = 0;
+    bool have_raw = false;
+    int16_t last_raw[6] = {0};
     for (;;) {
         imu_sample_t s;
-        if (mpu6050_read(&s) == ESP_OK) {
-            fail_count = 0;
-            if (recover_count < IMU_RECOVER_SAMPLES &&
-                ++recover_count == IMU_RECOVER_SAMPLES) {
-                channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, false);
-                led_fault(0);
-                ESP_LOGI("fusion", "IMU stream recovered; trainer output resumed");
+        esp_err_t read_err = mpu6050_read(&s);
+        bool sample_ok = read_err == ESP_OK;
+        if (sample_ok) {
+            int16_t raw[6] = {s.raw_accel[0], s.raw_accel[1], s.raw_accel[2],
+                              s.raw_gyro[0], s.raw_gyro[1], s.raw_gyro[2]};
+            bool identical = have_raw;
+            for (int i = 0; i < 6 && identical; i++) identical = raw[i] == last_raw[i];
+            for (int i = 0; i < 6; i++) last_raw[i] = raw[i];
+            have_raw = true;
+            frozen_count = identical ? frozen_count + 1 : 0;
+            float raw_amg = sqrtf(s.ax * s.ax + s.ay * s.ay + s.az * s.az);
+            sample_ok = isfinite(raw_amg) && raw_amg >= 0.3f && raw_amg <= 3.0f &&
+                        frozen_count < IMU_FROZEN_SAMPLES;
+            if (++health_div >= IMU_HEALTH_INTERVAL) {
+                health_div = 0;
+                sample_ok = sample_ok && mpu6050_health_check() == ESP_OK;
             }
+        }
+        if (sample_ok) {
+            fail_count = 0;
+            bool recovered_now = recover_count < IMU_RECOVER_SAMPLES &&
+                                 ++recover_count == IMU_RECOVER_SAMPLES;
             if (s_autodetect_req) {
                 s_autodetect_req = false;
                 autodetect_orientation(s.ax, s.ay, s.az);  // uses raw (pre-remap)
             }
             board_remap(&s);
             int64_t now = esp_timer_get_time();
+            if (recovered_now) {
+                madgwick_init(&filt, FUSION_BETA);
+                madgwick_set_from_accel(&filt, s.ax, s.ay, s.az);
+                t_prev = now;
+                gpx = s.gx;
+                gpy = s.gy;
+                gpz = s.gz;
+                last_amag = sqrtf(s.ax * s.ax + s.ay * s.ay + s.az * s.az);
+            }
             float dt = (now - t_prev) / 1e6f;
             t_prev = now;
             if (dt <= 0.0f || dt > 0.1f) {
@@ -201,6 +260,17 @@ static void fusion_task(void *arg)
             float yaw, pitch, roll;
             madgwick_get_euler_deg(&filt, &yaw, &pitch, &roll);
 
+            if (recovered_now) {
+                mapping_recenter(yaw, pitch, roll);
+                mapping_update(yaw, pitch, roll);
+                channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, false);
+                led_fault(0);
+                tap_count = 0;
+                last_tap_ms = 0;
+                settle = SETTLE_ITERS;
+                ESP_LOGI("fusion", "IMU recovered; orientation re-seeded and centered");
+            }
+
             if (s_recenter_req) {
                 s_recenter_req = false;
                 mapping_recenter(yaw, pitch, roll);
@@ -216,6 +286,9 @@ static void fusion_task(void *arg)
             if (settle < SETTLE_ITERS) {
                 if (++settle == SETTLE_ITERS) {
                     mapping_recenter(yaw, pitch, roll);
+                    mapping_update(yaw, pitch, roll);
+                    channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, false);
+                    led_fault(0);
                     ESP_LOGI("fusion", "centered; head motion now drives channels");
                 }
             } else {
@@ -260,11 +333,16 @@ static void fusion_task(void *arg)
                 log_div = 0;
                 ESP_LOGI("fusion", "ch pan %u  tilt %u", s_snap.pan_us, s_snap.tilt_us);
             }
-        } else if (++fail_count == IMU_FAIL_LIMIT) {
-            recover_count = 0;
-            channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, true);
-            led_fault(3);
-            ESP_LOGE("fusion", "IMU stream lost; trainer channels centered");
+        } else {
+            if (++fail_count == IMU_FAIL_LIMIT) {
+                recover_count = 0;
+                channel_state_set_inhibit(CHANNEL_INHIBIT_IMU_FAULT, true);
+                led_fault(3);
+                ESP_LOGE("fusion", "IMU stream invalid or lost; channels centered");
+                mpu6050_recover();
+            } else if (fail_count > IMU_FAIL_LIMIT && fail_count % 50 == 0) {
+                mpu6050_recover();
+            }
         }
         vTaskDelay(pdMS_TO_TICKS(FUSION_PERIOD_MS));
     }
@@ -302,7 +380,8 @@ void app_main(void)
 
     // Bring up the IMU. If it is not wired yet, keep running so the PARA link
     // still advertises and streams centered channels.
-    if (mpu6050_init() == ESP_OK) {
+    bool imu_ok = mpu6050_init() == ESP_OK;
+    if (imu_ok) {
         xTaskCreate(fusion_task, "fusion", 4096, NULL, 4, NULL);
     } else {
         led_fault(2);  // blink-code 2 = IMU not found
@@ -310,19 +389,30 @@ void app_main(void)
                       "above), AD0=GND, VCC=3V3, then reset.");
     }
 
-    // With bootloader rollback enabled, a freshly OTA'd image boots as
-    // "pending verify". Getting this far (NVS, config, BLE up, IMU probed)
-    // counts as a good boot; mark it valid so the bootloader keeps it.
-    // If the image crashes before this line, the next reset rolls back.
-    for (int i = 0; i < 100 && !output_manager_is_ready(); i++) {
+    // Only a freshly OTA'd image is allowed to trigger rollback. A normal,
+    // already-valid image must stay alive in fail-safe mode for diagnosis
+    // instead of entering a restart loop because hardware is missing.
+    bool ble_host_ok = para_ble_wait_host_ready(5000);
+    for (int i = 0; i < 500 && !output_manager_is_ready(); i++) {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-    if (!output_manager_is_ready() || !para_ble_wait_ready(5000)) {
-        ESP_LOGE(TAG, "startup self-test failed; leaving OTA image unverified");
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        esp_restart();
+    bool startup_ok = ble_host_ok && output_manager_is_ready() && imu_ok;
+
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t ota_state;
+    bool pending_verify = esp_ota_get_state_partition(running, &ota_state) == ESP_OK &&
+                          ota_state == ESP_OTA_IMG_PENDING_VERIFY;
+    if (pending_verify && !startup_ok) {
+        ESP_LOGE(TAG, "OTA startup self-test failed; rolling back");
+        esp_err_t rollback_err = esp_ota_mark_app_invalid_rollback_and_reboot();
+        ESP_LOGE(TAG, "rollback unavailable: %s", esp_err_to_name(rollback_err));
+        return;
     }
-    ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
+    if (pending_verify) {
+        ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
+    } else if (!startup_ok) {
+        ESP_LOGE(TAG, "startup self-test failed; continuing with centered output");
+    }
 
     ESP_LOGI(TAG, "CrowMotion up. Waiting for radio (X20S) to connect.");
 }

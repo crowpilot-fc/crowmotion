@@ -6,9 +6,11 @@
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
+#include "esp_timer.h"
 
 static uint16_t s_channels[CROWMOTION_CHANNEL_COUNT];
 static uint32_t s_inhibit_mask;
+static int64_t s_last_update_us;
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 
 static uint16_t clamp_us(uint16_t value)
@@ -25,31 +27,41 @@ void channel_state_init(void)
         s_channels[i] = CROWMOTION_CHANNEL_CENTER_US;
     }
     s_inhibit_mask = 0;
+    s_last_update_us = 0;
     taskEXIT_CRITICAL(&s_mux);
 }
 
 void channel_state_replace(const uint16_t values[CROWMOTION_CHANNEL_COUNT])
 {
+    int64_t now = esp_timer_get_time();
     taskENTER_CRITICAL(&s_mux);
     for (int i = 0; i < CROWMOTION_CHANNEL_COUNT; i++) {
         s_channels[i] = clamp_us(values[i]);
     }
+    s_last_update_us = now;
     taskEXIT_CRITICAL(&s_mux);
 }
 
 uint16_t channel_state_get(uint8_t channel)
 {
     if (channel >= CROWMOTION_CHANNEL_COUNT) return CROWMOTION_CHANNEL_CENTER_US;
+    int64_t now = esp_timer_get_time();
     taskENTER_CRITICAL(&s_mux);
-    uint16_t value = s_inhibit_mask ? CROWMOTION_CHANNEL_CENTER_US : s_channels[channel];
+    bool stale = s_last_update_us == 0 ||
+                 now - s_last_update_us > CROWMOTION_CHANNEL_STALE_US;
+    uint16_t value = (s_inhibit_mask || stale) ?
+                     CROWMOTION_CHANNEL_CENTER_US : s_channels[channel];
     taskEXIT_CRITICAL(&s_mux);
     return value;
 }
 
 void channel_state_copy(uint16_t out[CROWMOTION_CHANNEL_COUNT])
 {
+    int64_t now = esp_timer_get_time();
     taskENTER_CRITICAL(&s_mux);
-    if (s_inhibit_mask) {
+    bool stale = s_last_update_us == 0 ||
+                 now - s_last_update_us > CROWMOTION_CHANNEL_STALE_US;
+    if (s_inhibit_mask || stale) {
         for (int i = 0; i < CROWMOTION_CHANNEL_COUNT; i++) {
             out[i] = CROWMOTION_CHANNEL_CENTER_US;
         }
@@ -72,8 +84,10 @@ void channel_state_set_inhibit(channel_inhibit_reason_t reason, bool enabled)
 
 bool channel_state_is_inhibited(void)
 {
+    int64_t now = esp_timer_get_time();
     taskENTER_CRITICAL(&s_mux);
-    bool inhibited = s_inhibit_mask != 0;
+    bool inhibited = s_inhibit_mask != 0 || s_last_update_us == 0 ||
+                      now - s_last_update_us > CROWMOTION_CHANNEL_STALE_US;
     taskEXIT_CRITICAL(&s_mux);
     return inhibited;
 }

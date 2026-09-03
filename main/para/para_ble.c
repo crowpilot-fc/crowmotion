@@ -67,7 +67,7 @@ static uint16_t s_fff6_val_handle;
 static bool s_boot_sent;
 static TickType_t s_stream_at_tick;
 static bool s_paused = false;   // true while WiFi config mode owns the radio
-static volatile bool s_ready;
+static volatile bool s_host_ready;
 
 static void para_advertise(void);
 
@@ -138,7 +138,7 @@ static void para_tx_task(void *arg)
     uint8_t frame[PARA_FRAME_MAX];
 
     for (;;) {
-        if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE &&
+        if (!s_paused && s_conn_handle != BLE_HS_CONN_HANDLE_NONE &&
             (int32_t)(xTaskGetTickCount() - s_stream_at_tick) >= 0) {
             if (!s_boot_sent) {
                 if (para_notify(boot_nudge, sizeof(boot_nudge)) == 0) {
@@ -192,6 +192,12 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
+            if (s_paused) {
+                ESP_LOGW(TAG, "Connection completed while paused; terminating");
+                ble_gap_terminate(event->connect.conn_handle,
+                                  BLE_ERR_REM_USER_CONN_TERM);
+                return 0;
+            }
             s_conn_handle = event->connect.conn_handle;
             s_boot_sent = false;
             s_stream_at_tick = xTaskGetTickCount() + pdMS_TO_TICKS(PARA_CONNECT_SETTLE_MS);
@@ -240,7 +246,7 @@ void para_ble_pause(void)
 void para_ble_resume(void)
 {
     s_paused = false;
-    if (s_ready && s_conn_handle == BLE_HS_CONN_HANDLE_NONE &&
+    if (s_host_ready && s_conn_handle == BLE_HS_CONN_HANDLE_NONE &&
         !ble_gap_adv_active()) {
         para_advertise();
     }
@@ -294,7 +300,6 @@ static void para_advertise(void)
         ESP_LOGE(TAG, "adv_start failed (rc %d)", rc);
         return;
     }
-    s_ready = true;
     ESP_LOGI(TAG, "Advertising as \"%s\" (services 0x%04X, 0x%04X)", name,
              PARA_SVC_UUID, PARA_SVC_SETTINGS_UUID);
 }
@@ -313,6 +318,7 @@ static void on_sync(void)
         ESP_LOGE(TAG, "infer_auto failed (rc %d)", rc);
         return;
     }
+    s_host_ready = true;
     para_advertise();
 }
 
@@ -320,7 +326,7 @@ static void on_reset(int reason)
 {
     ESP_LOGW(TAG, "BLE host reset (reason %d)", reason);
     s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
-    s_ready = false;
+    s_host_ready = false;
 }
 
 static void host_task(void *param)
@@ -374,12 +380,17 @@ int para_ble_start(const char *device_name)
     return 0;
 }
 
-bool para_ble_wait_ready(uint32_t timeout_ms)
+bool para_ble_wait_host_ready(uint32_t timeout_ms)
 {
     TickType_t start = xTaskGetTickCount();
     TickType_t timeout = pdMS_TO_TICKS(timeout_ms);
-    while (!s_ready && (xTaskGetTickCount() - start) < timeout) {
+    while (!s_host_ready && (xTaskGetTickCount() - start) < timeout) {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-    return s_ready;
+    return s_host_ready;
+}
+
+bool para_ble_is_host_ready(void)
+{
+    return s_host_ready;
 }

@@ -16,10 +16,10 @@ jobs:
     steps:
       - name: Validate release tag
         run: |
-          case "$TAG" in
-            v[0-9]*.[0-9]*.[0-9]*) : ;;
-            *) echo "::error::release tag '$TAG' is not vMAJOR.MINOR.PATCH"; exit 1 ;;
-          esac
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "::error::release tag '$TAG' is not vMAJOR.MINOR.PATCH or a valid prerelease tag"
+            exit 1
+          fi
 
       - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
@@ -28,8 +28,9 @@ jobs:
       - name: Verify tag matches firmware version
         run: |
           VER="${TAG#v}"
+          BASE_VER="${VER%%-*}"
           SRC=$(sed -n 's/#define CROWMOTION_VERSION "\(.*\)"/\1/p' main/version.h)
-          test "$VER" = "$SRC" || { echo "::error::version.h ($SRC) does not match $VER"; exit 1; }
+          test "$BASE_VER" = "$SRC" || { echo "::error::version.h ($SRC) does not match $BASE_VER"; exit 1; }
 
       - name: Enable signed OTA images
         env:
@@ -45,7 +46,7 @@ jobs:
           esp_idf_version: v5.5.4
           target: esp32c3
 
-      - name: Verify signature and stage release
+      - name: Verify signature and build release artifacts
         run: |
           VER="${TAG#v}"
           pip install --quiet "esptool==4.8.1"
@@ -62,9 +63,19 @@ jobs:
             0xf000 build/ota_data_initial.bin \
             0x20000 build/crowmotion.bin
           cp build/crowmotion.bin "site/crowmotion/crowmotion-${VER}.bin"
+
+      # Prerelease binaries are attached below for explicit testing, but only a
+      # stable vMAJOR.MINOR.PATCH release may change production OTA discovery.
+      - name: Stage production OTA metadata
+        if: ${{ github.event.release.prerelease == false }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::a production release requires an exact vMAJOR.MINOR.PATCH tag"
+            exit 1
+          }
+          VER="${TAG#v}"
           printf '{"version":"%s","url":"https://updates.crowpilot.in/crowmotion/crowmotion-%s.bin"}\n' \
-            "$VER" "$VER" > site/crowmotion/latest.json
-          cp site/crowmotion/latest.json site/crowmotion/latest-esp32c3.json
+            "$VER" "$VER" > site/crowmotion/latest-esp32c3.json
           cat > site/flash/manifest.json <<EOF
           {"name":"CrowMotion","version":"${VER}","new_install_prompt_erase":true,"builds":[{"chipFamily":"ESP32-C3","parts":[{"path":"crowmotion-merged.bin","offset":0}]}]}
           EOF
@@ -78,6 +89,7 @@ jobs:
             site/flash/crowmotion-merged.bin --clobber
 
       - name: Deploy update site
+        if: ${{ github.event.release.prerelease == false }}
         uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -30,10 +30,19 @@ safety-critical model until those gates are complete.
 - 100 kohm pulldown from jack tip to ground
 - Low-capacitance 5 V ESD protection at the jack
 
-The switch placement lets the battery charge while CrowMotion is off. Verify
-the exact LX-LCBST charger IC and set charge current to 150-175 mA unless the
-cell datasheet explicitly permits more. Do not charge and operate at the same
-time until proper power-path behavior is confirmed.
+CrowMotion has two enclosure and power variants with the same firmware:
+
+- Self-contained: the complete locked BOM above, including battery, charger,
+  and slide switch.
+- Externally powered: omit the battery, LX-LCBST, and slide switch, then power
+  the ESP32-C3 directly through its USB-C connector from a 5 V USB power bank.
+
+The self-contained switch placement lets the battery charge while CrowMotion
+is off. Verify the exact LX-LCBST charger IC and set charge current to 150-175
+mA unless the cell datasheet explicitly permits more. Do not charge and
+operate at the same time until proper power-path behavior is confirmed. For the
+external variant, confirm that the selected power bank does not auto-shut down
+at CrowMotion's relatively low load.
 
 ## Pin assignment
 
@@ -70,8 +79,9 @@ idf.py -p /dev/cu.usbmodemXXXX flash monitor
 ```
 
 The application binary is generated at `build/crowmotion.bin`. Tagged releases
-are signed, attached to GitHub Releases, and staged for the browser flasher and
-OTA service. See [docs/BUILD.md](docs/BUILD.md) for toolchain details.
+are signed and attached to GitHub Releases. Prereleases remain explicit test
+downloads; only stable tags update the ESP32-C3 browser flasher and OTA
+metadata. See [docs/BUILD.md](docs/BUILD.md) for toolchain details.
 
 ## License
 

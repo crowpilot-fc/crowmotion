@@ -23,6 +23,8 @@ typedef struct {
 
 esp_err_t mpu6050_init(void);
 esp_err_t mpu6050_read(imu_sample_t *out);
+esp_err_t mpu6050_health_check(void);
+esp_err_t mpu6050_recover(void);
 
 #ifdef __cplusplus
 }

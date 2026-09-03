@@ -21,11 +21,10 @@ static const char *TAG = "output";
 
 #define OUTPUT_POLL_MS 20
 #define JACK_DEBOUNCE_SAMPLES 5
-#define CENTER_BLE_SETTLE_MS 80
+#define CENTER_BLE_SETTLE_MS 250
 #define CENTER_PPM_FRAMES 3
 
 static volatile bool s_paused;
-static volatile bool s_ready;
 static volatile bool s_jack_inserted;
 static volatile crowmotion_active_output_t s_active = CROWMOTION_OUTPUT_OFF;
 
@@ -50,36 +49,45 @@ static crowmotion_active_output_t requested_output(void)
     }
 }
 
-static void send_centered_ppm(bool inverted)
+static esp_err_t send_centered_ppm(bool inverted)
 {
     uint16_t centered[CROWMOTION_CHANNEL_COUNT];
     for (int i = 0; i < CROWMOTION_CHANNEL_COUNT; i++) {
         centered[i] = CROWMOTION_CHANNEL_CENTER_US;
     }
     for (int i = 0; i < CENTER_PPM_FRAMES; i++) {
-        ppm_output_send_frame(centered, inverted);
+        esp_err_t err = ppm_output_send_frame(centered, inverted);
+        if (err != ESP_OK) return err;
     }
+    return ESP_OK;
 }
 
-static void switch_output(crowmotion_active_output_t next)
+static esp_err_t switch_output(crowmotion_active_output_t next)
 {
-    if (next == s_active) return;
+    if (next == s_active) return ESP_OK;
 
     bool inverted = config_get()->ppm_inverted != 0;
+    esp_err_t err = ESP_OK;
     channel_state_set_inhibit(CHANNEL_INHIBIT_OUTPUT_SWITCH, true);
 
     if (s_active == CROWMOTION_OUTPUT_PPM) {
-        send_centered_ppm(inverted);
-        ESP_ERROR_CHECK(ppm_output_set_enabled(false, inverted));
+        err = send_centered_ppm(inverted);
+        esp_err_t disable_err = ppm_output_set_enabled(false, inverted);
+        if (err == ESP_OK) err = disable_err;
     } else if (s_active == CROWMOTION_OUTPUT_BLUETOOTH) {
         vTaskDelay(pdMS_TO_TICKS(CENTER_BLE_SETTLE_MS));
         para_ble_pause();
     }
+    if (err != ESP_OK) goto fail;
 
     if (next == CROWMOTION_OUTPUT_PPM) {
         para_ble_pause();
-        ESP_ERROR_CHECK(ppm_output_set_enabled(true, inverted));
-        send_centered_ppm(inverted);
+        err = ppm_output_set_enabled(true, inverted);
+        if (err == ESP_OK) err = send_centered_ppm(inverted);
+        if (err != ESP_OK) {
+            ppm_output_set_enabled(false, inverted);
+            goto fail;
+        }
         led_set(LED_CONNECTED);
         ESP_LOGI(TAG, "trainer output: PPM jack (%s polarity)",
                  inverted ? "inverted" : "positive");
@@ -96,6 +104,14 @@ static void switch_output(crowmotion_active_output_t next)
     s_active = next;
     channel_state_set_inhibit(CHANNEL_INHIBIT_OUTPUT_SWITCH,
                               next == CROWMOTION_OUTPUT_OFF);
+    return ESP_OK;
+
+fail:
+    para_ble_pause();
+    s_active = CROWMOTION_OUTPUT_OFF;
+    channel_state_set_inhibit(CHANNEL_INHIBIT_OUTPUT_SWITCH, true);
+    ESP_LOGE(TAG, "trainer output transition failed: %s", esp_err_to_name(err));
+    return err;
 }
 
 static void output_task(void *arg)
@@ -103,7 +119,6 @@ static void output_task(void *arg)
     bool candidate = read_jack();
     int stable_samples = JACK_DEBOUNCE_SAMPLES;
     s_jack_inserted = candidate;
-    s_ready = true;
 
     for (;;) {
         bool raw = read_jack();
@@ -120,7 +135,10 @@ static void output_task(void *arg)
         }
 
         crowmotion_active_output_t wanted = requested_output();
-        if (wanted != s_active) switch_output(wanted);
+        if (wanted != s_active && switch_output(wanted) != ESP_OK) {
+            vTaskDelay(pdMS_TO_TICKS(500));
+            continue;
+        }
 
         if (s_active == CROWMOTION_OUTPUT_PPM) {
             uint16_t channels[CROWMOTION_CHANNEL_COUNT];
@@ -181,7 +199,11 @@ bool output_manager_is_ble_connected(void)
 
 bool output_manager_is_ready(void)
 {
-    return s_ready;
+    if (s_active == CROWMOTION_OUTPUT_PPM) return true;
+    if (s_active == CROWMOTION_OUTPUT_BLUETOOTH) {
+        return para_ble_is_host_ready();
+    }
+    return false;
 }
 
 bool output_manager_is_jack_inserted(void)

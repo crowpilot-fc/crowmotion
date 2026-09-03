@@ -17,7 +17,7 @@ static const char *TAG = "mpu6050";
 #define MPU_I2C_PORT I2C_NUM_0
 #define MPU_I2C_HZ 100000
 #define MPU_ADDR 0x68
-#define MPU_IO_TIMEOUT_MS 100
+#define MPU_IO_TIMEOUT_MS 20
 
 #define REG_SMPLRT_DIV 0x19
 #define REG_CONFIG 0x1A
@@ -148,4 +148,30 @@ esp_err_t mpu6050_read(imu_sample_t *out)
     out->gz = gz / GYRO_LSB_PER_DPS;
     out->temp_c = temp / TEMP_LSB_PER_C + TEMP_OFFSET_C;
     return ESP_OK;
+}
+
+esp_err_t mpu6050_health_check(void)
+{
+    if (s_dev == NULL) return ESP_ERR_INVALID_STATE;
+    uint8_t who = 0;
+    uint8_t power = 0;
+    esp_err_t err = reg_read(REG_WHO_AM_I, &who, 1);
+    if (err != ESP_OK) return err;
+    if (who != WHO_AM_I_MPU6050) return ESP_ERR_INVALID_RESPONSE;
+    err = reg_read(REG_PWR_MGMT_1, &power, 1);
+    if (err != ESP_OK) return err;
+    return (power & 0x40) ? ESP_ERR_INVALID_STATE : ESP_OK;
+}
+
+esp_err_t mpu6050_recover(void)
+{
+    if (s_dev == NULL) return ESP_ERR_INVALID_STATE;
+    esp_err_t err = configure_sensor();
+    if (err == ESP_OK) err = mpu6050_health_check();
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "MPU6050 recovered and reconfigured");
+    } else {
+        ESP_LOGW(TAG, "MPU6050 recovery failed: %s", esp_err_to_name(err));
+    }
+    return err;
 }

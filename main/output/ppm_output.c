@@ -7,6 +7,7 @@
 
 #include "driver/gpio.h"
 #include "driver/rmt_tx.h"
+#include "esp_private/gpio.h"
 #include "esp_log.h"
 
 static const char *TAG = "ppm";
@@ -18,17 +19,9 @@ static rmt_encoder_handle_t s_encoder;
 static int s_gpio = -1;
 static bool s_enabled;
 
-static void drive_idle(bool inverted)
-{
-    gpio_reset_pin(s_gpio);
-    gpio_set_direction(s_gpio, GPIO_MODE_OUTPUT);
-    gpio_set_level(s_gpio, inverted ? 1 : 0);
-}
-
 esp_err_t ppm_output_init(int gpio_num)
 {
     s_gpio = gpio_num;
-    drive_idle(false);
 
     rmt_tx_channel_config_t channel_config = {
         .gpio_num = gpio_num,
@@ -36,6 +29,7 @@ esp_err_t ppm_output_init(int gpio_num)
         .resolution_hz = PPM_RESOLUTION_HZ,
         .mem_block_symbols = 48,
         .trans_queue_depth = 2,
+        .flags.init_level = 0,
     };
     esp_err_t err = rmt_new_tx_channel(&channel_config, &s_channel);
     if (err != ESP_OK) return err;
@@ -51,16 +45,26 @@ esp_err_t ppm_output_init(int gpio_num)
 
 esp_err_t ppm_output_set_enabled(bool enabled, bool inverted)
 {
+    (void)inverted;
     if (s_channel == NULL) return ESP_ERR_INVALID_STATE;
     if (enabled == s_enabled) return ESP_OK;
 
     esp_err_t err = ESP_OK;
     if (enabled) {
-        err = rmt_enable(s_channel);
+        // Disabling the output makes the pin high-impedance. Reconnect the
+        // RMT signal before every enable; rmt_enable() only changes the RMT
+        // state machine and does not restore GPIO-matrix routing.
+        err = rmt_tx_switch_gpio(s_channel, s_gpio, false);
+        if (err == ESP_OK) err = rmt_enable(s_channel);
     } else {
         err = rmt_tx_wait_all_done(s_channel, 100);
-        if (err == ESP_OK) err = rmt_disable(s_channel);
-        drive_idle(inverted);
+        esp_err_t disable_err = rmt_disable(s_channel);
+        if (err == ESP_OK) err = disable_err;
+        if (disable_err == ESP_OK) {
+            // Disconnect the output driver without overwriting the pin's RMT
+            // configuration. The external 100k resistor then holds tip low.
+            gpio_output_disable(s_gpio);
+        }
     }
     if (err == ESP_OK) s_enabled = enabled;
     return err;
